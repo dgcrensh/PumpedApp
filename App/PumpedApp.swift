@@ -17,6 +17,9 @@ struct PumpedApp: App {
         if inMemory, CommandLine.arguments.contains("-ui-testing-sample-split") {
             UITestingData.addSampleSplit(to: container.mainContext)
         }
+        if inMemory, CommandLine.arguments.contains("-ui-testing-sample-history") {
+            UITestingData.addSampleHistory(to: container.mainContext)
+        }
     }
 
     var body: some Scene {
