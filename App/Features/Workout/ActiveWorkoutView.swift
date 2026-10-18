@@ -13,6 +13,7 @@ struct ActiveWorkoutView: View {
 
     @State private var undo: SwipeUndo?
     @State private var isConfirmingDiscard = false
+    @State private var isChangingGym = false
 
     var body: some View {
         NavigationStack {
@@ -51,12 +52,20 @@ struct ActiveWorkoutView: View {
                     }
                     if session.phase != .complete {
                         Menu {
+                            Button {
+                                isChangingGym = true
+                            } label: {
+                                Label("Change gym", systemImage: "mappin.and.ellipse")
+                            }
                             Button("Discard workout", role: .destructive) { isConfirmingDiscard = true }
                         } label: {
                             Label("More", systemImage: "ellipsis.circle")
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $isChangingGym) {
+                ChangeGymSheet(session: session)
             }
             .confirmationDialog("Discard this workout?", isPresented: $isConfirmingDiscard, titleVisibility: .visible) {
                 Button("Discard workout", role: .destructive) {

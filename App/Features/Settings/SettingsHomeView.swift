@@ -8,6 +8,7 @@ struct SettingsHomeView: View {
     @Query private var stretches: [Stretch]
     @Query private var stretchSequences: [StretchSequence]
     @Query private var seedState: [SeedState]
+    @Query private var gyms: [Gym]
 
     var body: some View {
         NavigationStack {
@@ -41,6 +42,11 @@ struct SettingsHomeView: View {
                 Section("Workout") {
                     NavigationLink("Rest timers") {
                         RestTimerSettingsView()
+                    }
+                    NavigationLink {
+                        GymListView()
+                    } label: {
+                        LabeledContent("Gyms", value: "\(gyms.count)")
                     }
                 }
             }
