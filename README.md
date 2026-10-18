@@ -44,13 +44,18 @@ swift test --package-path PumpedCore
 
 These also validate `App/Resources/seed.json`: every exercise must reference a known movement
 type, equipment and muscle groups, and every movement type needs primary muscles and at least
-one exercise.
+one exercise. `BundledLibraryContentTests` adds coverage checks on the shipped content: 3–6
+variations per movement type spread over more than one equipment setup, variations that hit their
+movement type's primary muscles, and the Upper/Lower/Full Body stretch sequences.
 
 ## Exercise library
 
 `seed.json` is imported into SwiftData on first launch. Every record has a stable string `id`.
 To change the library, edit the file and bump its `version`; on next launch the app updates
 existing rows by `id` (keeping likes, hidden flags and history) and adds new ones.
+
+Browse the imported library in the app under **Settings → Exercise library** (exercises grouped
+by movement type, cardio, stretches and stretch sequences).
 
 ## CI
 

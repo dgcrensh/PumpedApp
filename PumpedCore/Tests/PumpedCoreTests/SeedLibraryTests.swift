@@ -5,13 +5,7 @@ import XCTest
 final class SeedLibraryTests: XCTestCase {
     /// The real `App/Resources/seed.json`, so CI rejects a broken library before it ships.
     func testBundledSeedIsValid() throws {
-        let url = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // PumpedCoreTests
-            .deletingLastPathComponent() // Tests
-            .deletingLastPathComponent() // PumpedCore
-            .deletingLastPathComponent() // repo root
-            .appendingPathComponent("App/Resources/seed.json")
-        let library = try SeedLibrary.load(from: Data(contentsOf: url))
+        let library = try Self.bundledLibrary()
         XCTAssertGreaterThanOrEqual(library.version, 1)
         XCTAssertFalse(library.exercises.isEmpty)
         XCTAssertFalse(library.stretchSequences.isEmpty)
@@ -119,6 +113,17 @@ final class SeedLibraryTests: XCTestCase {
         XCTAssertEqual(ExerciseType.heavyCompound.defaultRestSeconds, 180)
         XCTAssertEqual(ExerciseType.compound.defaultRestSeconds, 120)
         XCTAssertEqual(ExerciseType.isolation.defaultRestSeconds, 60)
+    }
+
+    /// Loads and validates the real `App/Resources/seed.json`.
+    static func bundledLibrary() throws -> SeedLibrary {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent() // PumpedCoreTests
+            .deletingLastPathComponent() // Tests
+            .deletingLastPathComponent() // PumpedCore
+            .deletingLastPathComponent() // repo root
+            .appendingPathComponent("App/Resources/seed.json")
+        return try SeedLibrary.load(from: Data(contentsOf: url))
     }
 
     static func validLibrary() -> SeedLibrary {
