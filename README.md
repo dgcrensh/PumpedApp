@@ -57,6 +57,17 @@ existing rows by `id` (keeping likes, hidden flags and history) and adds new one
 Browse the imported library in the app under **Settings → Exercise library** (exercises grouped
 by movement type, cardio, stretches and stretch sequences).
 
+## Splits
+
+The **Splits** tab holds the split editor: create, rename, delete and activate splits; add,
+remove and reorder days; and, per day, the ordered movement slots (duplicates allowed), the
+cool-down stretch sequence and an optional default warmup cardio. Each split shows where its cycle
+stands ("Next up: Pull, day 2 of 3") with a picker to skip or repeat a day. Stretch sequences live
+there too: the seeded defaults are read-only and can be duplicated into editable copies.
+
+The cycle math (keeping the same day "next up" across edits) and list reordering live in
+`PumpedCore/Sources/PumpedCore/Splits` and are tested on Linux.
+
 ## CI
 
 GitHub Actions runs the `PumpedCore` tests on Linux and builds the app and runs its unit and
