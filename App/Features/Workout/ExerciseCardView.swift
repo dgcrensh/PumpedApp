@@ -6,6 +6,10 @@ import SwiftUI
 /// weight steppers (prefilled from last time) and Log set.
 struct ExerciseCardView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.cardSwipeActions) private var swipeActions
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Wide enough for "137.5" at the current text size.
+    @ScaledMetric(relativeTo: .title3) private var weightFieldWidth = 80.0
     let entry: WorkoutEntry
     let session: WorkoutSession
     let onSwap: () -> Void
@@ -92,10 +96,12 @@ struct ExerciseCardView: View {
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityHint("Shows progress and PRs")
                     .accessibilityIdentifier("card-exercise-name")
+                    .cardSwipeAccessibilityActions(swipeActions)
                 } else {
                     Text("No available variation")
                         .font(.title2.bold())
                         .accessibilityAddTraits(.isHeader)
+                        .cardSwipeAccessibilityActions(swipeActions)
                 }
                 if let exercise = entry.exercise {
                     Text(subtitle(for: exercise))
@@ -207,26 +213,37 @@ struct ExerciseCardView: View {
                     .font(.title3.weight(.semibold))
                     .monospacedDigit()
             }
-            HStack(spacing: 8) {
-                TextField("Weight", value: $weight, format: .number)
-                    .keyboardType(.decimalPad)
-                    .focused($isEditingWeight)
-                    .font(.title3.weight(.semibold))
-                    .monospacedDigit()
-                    .frame(maxWidth: 80)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Weight in pounds")
-                Text("lb")
-                    .foregroundStyle(.secondary)
+            // At accessibility text sizes the weight controls stack instead of overflowing the card.
+            let weightLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(spacing: 8))
+            weightLayout {
+                HStack(spacing: 8) {
+                    TextField("Weight", value: $weight, format: .number)
+                        .keyboardType(.decimalPad)
+                        .focused($isEditingWeight)
+                        .font(.title3.weight(.semibold))
+                        .monospacedDigit()
+                        .frame(maxWidth: weightFieldWidth)
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Weight in pounds")
+                    Text("lb")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
                 Spacer(minLength: 0)
-                Button("+5 lb") { weight = SetPrefill.stepWeight(weight, by: 1) }
-                    .buttonStyle(.bordered)
-                Stepper(
-                    "Weight",
-                    onIncrement: { weight = SetPrefill.stepWeight(weight, by: 1) },
-                    onDecrement: { weight = SetPrefill.stepWeight(weight, by: -1) }
-                )
-                .labelsHidden()
+                HStack(spacing: 8) {
+                    Button("+5 lb") { weight = SetPrefill.stepWeight(weight, by: 1) }
+                        .buttonStyle(.bordered)
+                        .accessibilityLabel("Add 5 pounds")
+                    Stepper(
+                        "Weight",
+                        onIncrement: { weight = SetPrefill.stepWeight(weight, by: 1) },
+                        onDecrement: { weight = SetPrefill.stepWeight(weight, by: -1) }
+                    )
+                    .labelsHidden()
+                    .accessibilityValue("\(SetValues.format(weight)) pounds")
+                }
             }
             Button(action: logSet) {
                 Text("Log set")

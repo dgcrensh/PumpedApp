@@ -31,12 +31,60 @@ extension SwipeDirection {
     }
 }
 
+extension SwipeDirection {
+    /// The VoiceOver action that stands in for the swipe.
+    var accessibilityActionName: String {
+        switch self {
+        case .right: "Done"
+        case .left: "Later"
+        case .up: "Like"
+        case .down: "Equipment unavailable"
+        }
+    }
+}
+
+/// The top card's swipes, handed to the card's contents so its first element can offer them as
+/// VoiceOver actions. Actions on the card's container aren't reachable, because the container
+/// itself never gets VoiceOver focus.
+struct CardSwipeActions {
+    let enabled: Set<SwipeDirection>
+    let perform: (SwipeDirection) -> Void
+}
+
+private struct CardSwipeActionsKey: EnvironmentKey {
+    static let defaultValue: CardSwipeActions? = nil
+}
+
+extension EnvironmentValues {
+    var cardSwipeActions: CardSwipeActions? {
+        get { self[CardSwipeActionsKey.self] }
+        set { self[CardSwipeActionsKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Adds the card's enabled swipes as named VoiceOver actions: Done, Later, Like, Equipment
+    /// unavailable.
+    func cardSwipeAccessibilityActions(_ actions: CardSwipeActions?) -> some View {
+        accessibilityActions {
+            if let actions {
+                ForEach(SwipeDirection.allCases.filter { actions.enabled.contains($0) }, id: \.self) { direction in
+                    Button(direction.accessibilityActionName) { actions.perform(direction) }
+                }
+            }
+        }
+    }
+}
+
 /// The draggable top card. Recognizes the four swipes with `SwipeClassifier`, labels the action
 /// while dragging, and animates the card away before reporting the swipe.
 ///
 /// Directions not in `enabled` spring back. A like (up) bounces back, since that card stays.
+/// With `allowsDrag` off (large accessibility text, where the card scrolls instead) the swipes are
+/// only reachable through VoiceOver actions and the buttons the lifting screen shows.
 struct SwipeableCard<Content: View>: View {
     var enabled: Set<SwipeDirection> = Set(SwipeDirection.allCases)
+    var allowsDrag = true
     var classifier: SwipeClassifier = .default
     let onSwipe: (SwipeDirection) -> Void
     @ViewBuilder let content: () -> Content
@@ -46,16 +94,13 @@ struct SwipeableCard<Content: View>: View {
 
     var body: some View {
         content()
+            .environment(\.cardSwipeActions, CardSwipeActions(enabled: enabled, perform: report))
             .overlay(alignment: .top) { dragLabel }
             .offset(offset)
             .rotationEffect(.degrees(Double(offset.width) / 25), anchor: .bottom)
-            .gesture(drag)
+            .gesture(drag, including: allowsDrag ? .all : .subviews)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("exercise-card")
-            .accessibilityAction(named: "Done") { report(.right) }
-            .accessibilityAction(named: "Later") { report(.left) }
-            .accessibilityAction(named: "Like") { report(.up) }
-            .accessibilityAction(named: "Equipment unavailable") { report(.down) }
     }
 
     @ViewBuilder
