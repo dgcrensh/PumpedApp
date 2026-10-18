@@ -12,7 +12,31 @@ final class LaunchTests: XCTestCase {
         }
 
         tabBar.buttons["Settings"].tap()
-        XCTAssertTrue(app.staticTexts["Exercises"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(in: app, labelStartingWith: "Exercises").waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Not imported"].exists)
+    }
+
+    @MainActor
+    func testLibraryBrowserShowsExercisesAndSequences() throws {
+        let app = XCUIApplication()
+        app.launch()
+        app.tabBars.firstMatch.buttons["Settings"].tap()
+
+        element(in: app, labelStartingWith: "Exercises").tap()
+        // First row of the first section (Biceps Curl); later sections may not be loaded yet.
+        XCTAssertTrue(element(in: app, labelStartingWith: "Barbell Curl").waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+
+        element(in: app, labelStartingWith: "Stretch sequences").tap()
+        for name in ["Full Body", "Lower Body", "Upper Body"] {
+            XCTAssertTrue(element(in: app, labelStartingWith: name).waitForExistence(timeout: 5), "missing \(name) sequence")
+        }
+    }
+
+    /// Rows combine their texts into one accessibility label, so match on its start.
+    private func element(in app: XCUIApplication, labelStartingWith prefix: String) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+            .firstMatch
     }
 }
