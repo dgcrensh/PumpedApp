@@ -1,0 +1,79 @@
+name: Pumped
+options:
+  bundleIdPrefix: com.dgcrensh
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Set your team in Xcode (Signing & Capabilities) or here to run on a device.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  PumpedCore:
+    path: PumpedCore
+
+targets:
+  Pumped:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: PumpedCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dgcrensh.pumped
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Pumped
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"
+
+  PumpedTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - PumpedTests
+    dependencies:
+      - target: Pumped
+      - package: PumpedCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.dgcrensh.pumped.tests
+
+  PumpedUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - PumpedUITests
+    dependencies:
+      - target: Pumped
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.dgcrensh.pumped.uitests
+        TEST_TARGET_NAME: Pumped
+
+schemes:
+  Pumped:
+    build:
+      targets:
+        Pumped: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PumpedTests
+        - PumpedUITests
+    archive:
+      config: Release

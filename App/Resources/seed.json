@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "muscleGroups": [
+    { "id": "quads", "name": "Quads" },
+    { "id": "glutes", "name": "Glutes" },
+    { "id": "hamstrings", "name": "Hamstrings" },
+    { "id": "lower-back", "name": "Lower back" },
+    { "id": "chest", "name": "Chest" },
+    { "id": "front-delts", "name": "Front delts" },
+    { "id": "triceps", "name": "Triceps" },
+    { "id": "lats", "name": "Lats" },
+    { "id": "biceps", "name": "Biceps" },
+    { "id": "upper-back", "name": "Upper back" }
+  ],
+  "equipment": [
+    { "id": "barbell", "name": "Barbell" },
+    { "id": "rack", "name": "Squat rack" },
+    { "id": "bench", "name": "Bench" },
+    { "id": "dumbbells", "name": "Dumbbells" },
+    { "id": "cable-machine", "name": "Cable machine" },
+    { "id": "leg-press", "name": "Leg press" },
+    { "id": "pull-up-bar", "name": "Pull-up bar" }
+  ],
+  "movementTypes": [
+    { "id": "squat", "name": "Squat", "primaryMuscles": ["quads", "glutes"] },
+    { "id": "hip-hinge", "name": "Hip Hinge", "primaryMuscles": ["hamstrings", "glutes", "lower-back"] },
+    { "id": "horizontal-press", "name": "Horizontal Press", "primaryMuscles": ["chest", "front-delts", "triceps"] },
+    { "id": "vertical-pull", "name": "Vertical Pull", "primaryMuscles": ["lats", "biceps"] }
+  ],
+  "exercises": [
+    { "id": "back-squat", "name": "Back Squat", "movementType": "squat", "equipment": ["barbell", "rack"], "exerciseType": "heavyCompound", "muscles": ["quads", "glutes"] },
+    { "id": "goblet-squat", "name": "Goblet Squat", "movementType": "squat", "equipment": ["dumbbells"], "exerciseType": "compound", "muscles": ["quads", "glutes"] },
+    { "id": "leg-press", "name": "Leg Press", "movementType": "squat", "equipment": ["leg-press"], "exerciseType": "compound", "muscles": ["quads", "glutes"] },
+    { "id": "conventional-deadlift", "name": "Conventional Deadlift", "movementType": "hip-hinge", "equipment": ["barbell"], "exerciseType": "heavyCompound", "muscles": ["hamstrings", "glutes", "lower-back"] },
+    { "id": "dumbbell-rdl", "name": "Dumbbell Romanian Deadlift", "movementType": "hip-hinge", "equipment": ["dumbbells"], "exerciseType": "compound", "muscles": ["hamstrings", "glutes"] },
+    { "id": "barbell-bench-press", "name": "Barbell Bench Press", "movementType": "horizontal-press", "equipment": ["barbell", "bench"], "exerciseType": "heavyCompound", "muscles": ["chest", "front-delts", "triceps"] },
+    { "id": "dumbbell-bench-press", "name": "Dumbbell Bench Press", "movementType": "horizontal-press", "equipment": ["dumbbells", "bench"], "exerciseType": "compound", "muscles": ["chest", "front-delts", "triceps"] },
+    { "id": "push-up", "name": "Push-Up", "movementType": "horizontal-press", "equipment": [], "exerciseType": "compound", "muscles": ["chest", "front-delts", "triceps"] },
+    { "id": "pull-up", "name": "Pull-Up", "movementType": "vertical-pull", "equipment": ["pull-up-bar"], "exerciseType": "compound", "muscles": ["lats", "biceps", "upper-back"] },
+    { "id": "lat-pulldown", "name": "Lat Pulldown", "movementType": "vertical-pull", "equipment": ["cable-machine"], "exerciseType": "compound", "muscles": ["lats", "biceps"] }
+  ],
+  "cardioOptions": [
+    { "id": "treadmill", "name": "Treadmill" },
+    { "id": "bike", "name": "Bike" },
+    { "id": "rower", "name": "Rower" },
+    { "id": "elliptical", "name": "Elliptical" },
+    { "id": "stairs", "name": "Stair climber" }
+  ],
+  "stretches": [
+    { "id": "standing-quad-stretch", "name": "Standing Quad Stretch", "defaultDurationSec": 30 },
+    { "id": "standing-hamstring-stretch", "name": "Standing Hamstring Stretch", "defaultDurationSec": 30 },
+    { "id": "doorway-chest-stretch", "name": "Doorway Chest Stretch", "defaultDurationSec": 30 },
+    { "id": "child-pose", "name": "Child's Pose", "defaultDurationSec": 45 }
+  ],
+  "stretchSequences": [
+    {
+      "id": "full-body",
+      "name": "Full Body",
+      "items": [
+        { "stretch": "standing-quad-stretch", "durationSec": 30 },
+        { "stretch": "standing-hamstring-stretch", "durationSec": 30 },
+        { "stretch": "doorway-chest-stretch", "durationSec": 30 },
+        { "stretch": "child-pose", "durationSec": 45 }
+      ]
+    }
+  ]
+}
