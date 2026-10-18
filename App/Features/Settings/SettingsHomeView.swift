@@ -9,6 +9,10 @@ struct SettingsHomeView: View {
     @Query private var stretchSequences: [StretchSequence]
     @Query private var seedState: [SeedState]
     @Query private var gyms: [Gym]
+    @Query(filter: #Predicate<Exercise> { $0.isHidden }) private var hidden: [Exercise]
+    @Query(filter: #Predicate<Exercise> { $0.isLiked }) private var liked: [Exercise]
+    @Query(filter: #Predicate<Exercise> { $0.isCustom }) private var customExercises: [Exercise]
+    @Query(filter: #Predicate<Stretch> { $0.isCustom }) private var customStretches: [Stretch]
 
     var body: some View {
         NavigationStack {
@@ -39,6 +43,28 @@ struct SettingsHomeView: View {
                 } header: {
                     Text("Exercise library")
                 }
+                Section("Your exercises") {
+                    NavigationLink {
+                        LikedExercisesView()
+                    } label: {
+                        LabeledContent("Liked exercises", value: "\(liked.count)")
+                    }
+                    NavigationLink {
+                        HiddenExercisesView()
+                    } label: {
+                        LabeledContent("Hidden exercises", value: "\(hidden.count)")
+                    }
+                    NavigationLink {
+                        CustomExercisesView()
+                    } label: {
+                        LabeledContent("Custom exercises", value: "\(customExercises.count)")
+                    }
+                    NavigationLink {
+                        CustomStretchesView()
+                    } label: {
+                        LabeledContent("Custom stretches", value: "\(customStretches.count)")
+                    }
+                }
                 Section("Workout") {
                     NavigationLink("Rest timers") {
                         RestTimerSettingsView()
@@ -49,6 +75,15 @@ struct SettingsHomeView: View {
                         LabeledContent("Gyms", value: "\(gyms.count)")
                     }
                 }
+                #if DEBUG
+                Section {
+                    NavigationLink("Debug") {
+                        DebugMenuView()
+                    }
+                } footer: {
+                    Text("Only in debug builds.")
+                }
+                #endif
             }
             .navigationTitle("Settings")
         }

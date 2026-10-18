@@ -125,6 +125,45 @@ PRs are never stored: they're computed from the logged sets each time, so editin
 updates them everywhere. While lifting, the card shows a PR badge as soon as a logged set beats the
 exercise's history. `App/Features/History/HistoryData.swift` holds the queries and edits.
 
+## Settings
+
+Besides the library browser, rest timers and gyms, **Settings → Your exercises** has:
+
+- **Liked** and **Hidden exercises**, with Unlike and Unhide.
+- **Custom exercises**: name, movement type, exercise type (sets the rest timer), equipment (none
+  means bodyweight) and muscles (default: the movement's). Workouts pick them like any library
+  exercise. A custom exercise that's in your history can't be deleted; hide it instead.
+- **Custom stretches**: a name and default hold, for your own stretch sequences. Deleting one also
+  takes it out of those sequences.
+
+`App/Features/Settings/Library/LibraryEditing.swift` holds these edits.
+
+## Accessibility
+
+Every swipe has a VoiceOver action on the card's exercise name (Done, Later, Like, Equipment
+unavailable). At the accessibility text sizes the card scrolls, the swipes become buttons under it,
+and the weight controls stack. Colors are system colors throughout, so dark mode follows the phone.
+
+## Debug menu
+
+Debug builds (which includes running from Xcode onto a phone) have **Settings → Debug**:
+**Generate 6 months of history** adds about four workouts a week over the active split's days (or
+push/pull/legs without one), filled by the real selection weighting and with weights creeping up,
+to try out charts and selection. Generated workouts have ids starting with `debug-`, and **Remove
+generated history** deletes only those. The generator is `PumpedCore`'s `FakeHistory` (tested on
+Linux); `App/Features/Settings/Debug` writes it to SwiftData.
+
+## Running on your iPhone
+
+1. In `project.yml` set `DEVELOPMENT_TEAM` to your team id (or pick your team under *Signing &
+   Capabilities* after `xcodegen generate`). A free Apple ID works.
+2. Plug in the phone, choose it as the run destination and Run. The first time, trust the
+   developer on the phone under *Settings → General → VPN & Device Management*, and turn on
+   *Developer Mode* if iOS asks.
+3. Free provisioning expires after 7 days: re-run from Xcode to re-sign. Your data stays, because
+   the store lives on the phone and the bundle id doesn't change. A paid developer account (one
+   year) or TestFlight avoids the weekly re-sign.
+
 ## CI
 
 GitHub Actions runs the `PumpedCore` tests on Linux and builds the app and runs its unit and

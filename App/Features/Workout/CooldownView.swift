@@ -6,6 +6,9 @@ import SwiftUI
 struct CooldownView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
+    /// The countdown grows with the text size, within what fits on a phone.
+    @ScaledMetric(relativeTo: .largeTitle) private var countdownSize = 64.0
+    @ScaledMetric(relativeTo: .largeTitle) private var ringSize = 240.0
     let session: WorkoutSession
     @Binding var undo: SwipeUndo?
 
@@ -73,12 +76,15 @@ struct CooldownView: View {
                     .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 14, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Text(CountdownText.format(player.displaySeconds(at: now)))
-                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                    .font(.system(size: min(countdownSize, 96), weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .padding(.horizontal, 20)
                     .contentTransition(.numericText(countsDown: true))
                     .accessibilityLabel("\(player.displaySeconds(at: now)) seconds left")
             }
-            .frame(width: 240, height: 240)
+            .frame(width: min(ringSize, 300), height: min(ringSize, 300))
             if player.isPaused {
                 Text("Paused")
                     .font(.headline)

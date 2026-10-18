@@ -5,6 +5,7 @@ import SwiftUI
 /// The lifting phase: the card stack with its swipes, plus Add exercise and Finish lifting (spec §6.2).
 struct LiftingView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let session: WorkoutSession
     @Binding var undo: SwipeUndo?
 
@@ -21,25 +22,17 @@ struct LiftingView: View {
         VStack(spacing: 16) {
             progress(stack)
             if let current = stack.current, let entry = session.entries.first(where: { $0.slotOrder == current.id }) {
-                SwipeableCard(enabled: enabledSwipes(for: entry), onSwipe: handle) {
-                    ExerciseCardView(
-                        entry: entry,
-                        session: session,
-                        onSwap: { isSwapping = true },
-                        onHide: { isConfirmingHide = true }
-                    )
-                }
-                .background(alignment: .top) { cardsBehind(stack.pending.count - 1) }
-                .id("\(current.id)-\(current.exerciseID ?? "none")")
-                .confirmationDialog(
-                    "Never show \(entry.exercise?.name ?? "this exercise")?",
-                    isPresented: $isConfirmingHide,
-                    titleVisibility: .visible
-                ) {
-                    Button("Never show", role: .destructive, action: hideCurrent)
-                } message: {
-                    Text("You can bring it back in Settings.")
-                }
+                card(for: entry, waiting: stack.pending.count - 1)
+                    .id("\(current.id)-\(current.exerciseID ?? "none")")
+                    .confirmationDialog(
+                        "Never show \(entry.exercise?.name ?? "this exercise")?",
+                        isPresented: $isConfirmingHide,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Never show", role: .destructive, action: hideCurrent)
+                    } message: {
+                        Text("You can bring it back in Settings.")
+                    }
             } else {
                 ContentUnavailableView("No cards left", systemImage: "checkmark.circle")
             }
@@ -87,6 +80,48 @@ struct LiftingView: View {
 
     // MARK: Pieces
 
+    /// At accessibility text sizes the card is taller than the screen, so it scrolls, and buttons
+    /// stand in for the swipes a scroll would fight with.
+    @ViewBuilder
+    private func card(for entry: WorkoutEntry, waiting: Int) -> some View {
+        let enabled = enabledSwipes(for: entry)
+        let card = SwipeableCard(enabled: enabled, allowsDrag: !dynamicTypeSize.isAccessibilitySize, onSwipe: handle) {
+            ExerciseCardView(
+                entry: entry,
+                session: session,
+                onSwap: { isSwapping = true },
+                onHide: { isConfirmingHide = true }
+            )
+        }
+        if dynamicTypeSize.isAccessibilitySize {
+            ScrollView {
+                VStack(spacing: 12) {
+                    card
+                    swipeButtons(enabled)
+                }
+            }
+        } else {
+            card
+                .background(alignment: .top) { cardsBehind(waiting) }
+        }
+    }
+
+    private func swipeButtons(_ enabled: Set<SwipeDirection>) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            ForEach(SwipeDirection.allCases, id: \.self) { direction in
+                Button {
+                    handle(direction)
+                } label: {
+                    Label(direction.accessibilityActionName, systemImage: direction.systemImage)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(direction.tint)
+                .disabled(!enabled.contains(direction))
+            }
+        }
+    }
+
     private func progress(_ stack: WorkoutStack) -> some View {
         let total = stack.entries.count
         let done = stack.entries.filter { $0.status == .done }.count
@@ -121,14 +156,15 @@ struct LiftingView: View {
     }
 
     private var controls: some View {
-        HStack {
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout())
+        return layout {
             Button {
                 isAddingExercise = true
             } label: {
                 Label("Add exercise", systemImage: "plus")
             }
             .buttonStyle(.bordered)
-            Spacer()
+            if !dynamicTypeSize.isAccessibilitySize { Spacer() }
             Button {
                 isConfirmingFinish = true
             } label: {

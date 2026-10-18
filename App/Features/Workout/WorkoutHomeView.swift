@@ -42,6 +42,15 @@ struct WorkoutHomeView: View {
             resume(session)
         } else if let split = activeSplits.first, let day = SplitEditing.nextDay(of: split) {
             start(day, of: split)
+        } else if let split = activeSplits.first {
+            ContentUnavailableView {
+                Label("\(split.name) has no days", systemImage: "calendar.badge.plus")
+            } description: {
+                Text("Add a day, like Push or Legs, and its movements to start training.")
+            } actions: {
+                NavigationLink("Edit \(split.name)") { SplitDetailView(split: split) }
+                    .buttonStyle(.borderedProminent)
+            }
         } else {
             ContentUnavailableView(
                 "No split to train",
@@ -81,13 +90,18 @@ struct WorkoutHomeView: View {
             } header: {
                 Text(split.name)
             }
-            Section("Movements") {
-                if day.slots.isEmpty {
-                    Text("No movements yet. Add some in the Splits tab.")
-                        .foregroundStyle(.secondary)
-                }
+            Section {
                 ForEach(day.orderedSlots) { slot in
                     Text(slot.movementType?.name ?? "Unknown movement")
+                }
+                if day.slots.isEmpty {
+                    NavigationLink("Add movements to \(day.name)") { SplitDayEditorView(day: day) }
+                }
+            } header: {
+                Text("Movements")
+            } footer: {
+                if day.slots.isEmpty {
+                    Text("\(day.name) has no movements yet, so there's nothing to lift. Add some, or pick a different next day in the Splits tab.")
                 }
             }
         }
@@ -99,7 +113,7 @@ struct WorkoutHomeView: View {
                     await RestTimerService.requestPermission()
                 }
             }
-            .disabled(isLocating)
+            .disabled(isLocating || day.slots.isEmpty)
         }
     }
 

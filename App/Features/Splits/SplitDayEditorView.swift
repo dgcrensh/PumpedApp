@@ -17,6 +17,10 @@ struct SplitDayEditorView: View {
             }
 
             Section {
+                if slots.isEmpty {
+                    Text("No movements yet. A workout of this day has nothing to lift until you add some.")
+                        .foregroundStyle(.secondary)
+                }
                 ForEach(slots) { slot in
                     Text(slot.movementType?.name ?? "Missing movement")
                 }

@@ -74,6 +74,13 @@ private struct ExerciseRow: View {
                             .foregroundStyle(.pink)
                             .accessibilityLabel("Liked")
                     }
+                    if exercise.isCustom {
+                        Text("Custom")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor.opacity(0.15), in: Capsule())
+                    }
                     if exercise.isHidden {
                         Image(systemName: "eye.slash")
                             .foregroundStyle(.secondary)
