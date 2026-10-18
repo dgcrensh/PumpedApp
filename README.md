@@ -36,6 +36,14 @@ xcodebuild test -project Pumped.xcodeproj -scheme Pumped \
   -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
+## Workout engine (`PumpedCore`)
+
+| Path | What it is |
+|---|---|
+| `Selection/` | `VariationSelector` picks an exercise per movement slot (spec §7): filters hidden, gym-unavailable and already-stacked exercises, weights by like/familiarity/repeat damping (all constants in `SelectionTuning`), and falls back to same-muscle substitutes. Takes an injected `RandomNumberGenerator`; `SeededGenerator` makes it deterministic. |
+| `Stack/` | `WorkoutStack`, the workout state machine: phases, enforced card order, the four swipes, swap, hide and added slots. A `Codable` value so the app can persist it after every change. |
+| `Gyms/` | `EquipmentAvailability` (7-day unavailable-equipment window, reset on re-swipe) and `GymMatcher` (nearest known gym within 150 m). |
+
 ## Core logic tests (Mac or Linux)
 
 ```sh
