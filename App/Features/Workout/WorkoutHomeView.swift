@@ -7,10 +7,13 @@ struct WorkoutHomeView: View {
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }, sort: \WorkoutSession.startedAt, order: .reverse)
     private var inProgress: [WorkoutSession]
     @Query(filter: #Predicate<Split> { $0.isActive }) private var activeSplits: [Split]
-    @Query(sort: \Gym.name) private var gyms: [Gym]
 
-    @State private var gymID: String?
     @State private var presented: WorkoutSession?
+    @State private var isLocating = false
+    /// Asking which gym this is, after location didn't match one.
+    @State private var gymPrompt: GymPromptSheet.Reason?
+    /// The prompt's answer; the workout starts once the prompt is gone.
+    @State private var gymChoice: GymChoice?
     @State private var discarding: WorkoutSession?
     @State private var didAutoResume = false
 
@@ -18,6 +21,9 @@ struct WorkoutHomeView: View {
         NavigationStack {
             content
                 .navigationTitle("Workout")
+        }
+        .sheet(item: $gymPrompt, onDismiss: startWithChosenGym) { reason in
+            GymPromptSheet(reason: reason) { gymChoice = $0 }
         }
         .fullScreenCover(item: $presented, onDismiss: discardIfAsked) { session in
             ActiveWorkoutView(session: session) { discarding = session }
@@ -84,29 +90,56 @@ struct WorkoutHomeView: View {
                     Text(slot.movementType?.name ?? "Unknown movement")
                 }
             }
-            Section {
-                Picker("Gym", selection: $gymID) {
-                    Text("No gym").tag(String?.none)
-                    ForEach(gyms) { gym in
-                        Text(gym.name).tag(Optional(gym.id))
-                    }
-                }
-            }
         }
         .safeAreaInset(edge: .bottom) {
-            bigButton("Start workout") {
-                // The rest timer notifies at zero; ask the first time a workout starts.
-                Task { await RestTimerService.requestPermission() }
-                var rng = SystemRandomNumberGenerator()
-                presented = WorkoutFlow.start(
-                    day: day,
-                    of: split,
-                    gym: gyms.first { $0.id == gymID },
-                    in: context,
-                    using: &rng
-                )
+            bigButton(isLocating ? "Finding your gym…" : "Start workout") {
+                Task {
+                    await detectGymAndStart()
+                    // The rest timer notifies at zero; ask the first time a workout starts.
+                    await RestTimerService.requestPermission()
+                }
             }
+            .disabled(isLocating)
         }
+    }
+
+    // MARK: Starting
+
+    /// Spec §8: a known gym nearby starts straight away; otherwise ask.
+    private func detectGymAndStart() async {
+        isLocating = true
+        let fix = await LocationService.shared.currentFix()
+        isLocating = false
+        switch GymEditing.detect(fix, in: context) {
+        case .matched(let gymID):
+            begin(at: GymEditing.gym(gymID, in: context))
+        case .newGym(let location):
+            gymPrompt = .newGym(location)
+        case .pickGym:
+            gymPrompt = .noLocation
+        case .noGym:
+            begin(at: nil)
+        }
+    }
+
+    private func startWithChosenGym() {
+        guard let choice = gymChoice else { return }
+        gymChoice = nil
+        switch choice {
+        case .existing(let gym):
+            begin(at: gym)
+        case .new(let name, let location):
+            begin(at: GymEditing.createGym(named: name, at: location, in: context))
+        case .noGym:
+            begin(at: nil)
+        }
+    }
+
+    /// Starts the next day of the active split. The split may have changed while locating.
+    private func begin(at gym: Gym?) {
+        guard inProgress.isEmpty, let split = activeSplits.first, let day = SplitEditing.nextDay(of: split) else { return }
+        var rng = SystemRandomNumberGenerator()
+        presented = WorkoutFlow.start(day: day, of: split, gym: gym, in: context, using: &rng)
     }
 
     private func bigButton(_ title: String, action: @escaping () -> Void) -> some View {

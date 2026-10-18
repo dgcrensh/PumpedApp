@@ -91,3 +91,28 @@ final class GymMatcherTests: XCTestCase {
         XCTAssertEqual(GymMatcher.match(origin, among: gyms)?.id, "near")
     }
 }
+
+final class GymDetectionTests: XCTestCase {
+    private let origin = Coordinate(latitude: 40, longitude: -105)
+    private var gyms: [KnownGym] { [KnownGym(id: "a", location: origin)] }
+
+    func testKnownGymMatches() {
+        XCTAssertEqual(GymDetection.resolve(.located(origin), among: gyms), .matched(gymID: "a"))
+    }
+
+    func testNewLocationAsksToNameIt() {
+        let elsewhere = Coordinate(latitude: 41, longitude: -105)
+        XCTAssertEqual(GymDetection.resolve(.located(elsewhere), among: gyms), .newGym(elsewhere))
+        XCTAssertEqual(GymDetection.resolve(.located(origin), among: []), .newGym(origin))
+    }
+
+    func testNoLocationFallsBackToThePicker() {
+        XCTAssertEqual(GymDetection.resolve(.denied, among: gyms), .pickGym)
+        XCTAssertEqual(GymDetection.resolve(.unavailable, among: gyms), .pickGym)
+    }
+
+    func testNoLocationAndNoGymsStartsWithNoGym() {
+        XCTAssertEqual(GymDetection.resolve(.denied, among: []), .noGym)
+        XCTAssertEqual(GymDetection.resolve(.unavailable, among: []), .noGym)
+    }
+}

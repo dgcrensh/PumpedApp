@@ -14,6 +14,7 @@ struct LiftingView: View {
     @State private var isAddingExercise = false
     @State private var isConfirmingHide = false
     @State private var isConfirmingFinish = false
+    @State private var isChangingGym = false
 
     var body: some View {
         let stack = WorkoutFlow.stack(of: session)
@@ -62,6 +63,9 @@ struct LiftingView: View {
                 undo = nil
             }
         }
+        .sheet(isPresented: $isChangingGym) {
+            ChangeGymSheet(session: session)
+        }
         .sheet(isPresented: $isAddingExercise) {
             AddExerciseSheet { movementTypeID in
                 var rng = SystemRandomNumberGenerator()
@@ -91,11 +95,14 @@ struct LiftingView: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
             Spacer()
-            if let gym = session.gym?.name {
-                Label(gym, systemImage: "mappin.and.ellipse")
+            Button {
+                isChangingGym = true
+            } label: {
+                Label(session.gym?.name ?? "No gym", systemImage: "mappin.and.ellipse")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
             }
+            .accessibilityIdentifier("workout-gym")
+            .accessibilityHint("Changes the gym")
         }
     }
 
