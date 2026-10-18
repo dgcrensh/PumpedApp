@@ -78,3 +78,17 @@ extension SelectionMovementType {
         self.init(id: seed.id, primaryMuscles: Set(seed.primaryMuscles))
     }
 }
+
+extension SelectionHistory {
+    /// Builds the history from past workouts, newest first. Each workout maps a movement type id to
+    /// the exercise ids done for it in that workout.
+    public init(newestFirst workouts: [[String: Set<String>]]) {
+        var byMovementType: [String: [Set<String>]] = [:]
+        for workout in workouts {
+            for (movementType, exerciseIDs) in workout where !exerciseIDs.isEmpty {
+                byMovementType[movementType, default: []].append(exerciseIDs)
+            }
+        }
+        self.init(workoutsByMovementType: byMovementType)
+    }
+}

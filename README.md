@@ -42,6 +42,7 @@ xcodebuild test -project Pumped.xcodeproj -scheme Pumped \
 |---|---|
 | `Selection/` | `VariationSelector` picks an exercise per movement slot (spec §7): filters hidden, gym-unavailable and already-stacked exercises, weights by like/familiarity/repeat damping (all constants in `SelectionTuning`), and falls back to same-muscle substitutes. Takes an injected `RandomNumberGenerator`; `SeededGenerator` makes it deterministic. |
 | `Stack/` | `WorkoutStack`, the workout state machine: phases, enforced card order, the four swipes, swap, hide and added slots. A `Codable` value so the app can persist it after every change. |
+| `Workout/` | `SwipeClassifier` (turns a drag into one of the four swipes by distance or flick speed) and `SetPrefill` (what the card's reps and weight steppers start at). |
 | `Gyms/` | `EquipmentAvailability` (7-day unavailable-equipment window, reset on re-swipe) and `GymMatcher` (nearest known gym within 150 m). |
 
 ## Core logic tests (Mac or Linux)
@@ -75,6 +76,28 @@ there too: the seeded defaults are read-only and can be duplicated into editable
 
 The cycle math (keeping the same day "next up" across edits) and list reordering live in
 `PumpedCore/Sources/PumpedCore/Splits` and are tested on Linux.
+
+## Workouts
+
+The **Workout** tab shows the active split's next day with **Start workout**, or **Resume** for an
+unfinished one (the app also reopens it on launch). A workout runs warmup → lifting → cool-down:
+
+- **Warmup:** pick the cardio (defaults to the day's choice, then the last one used), log the
+  duration and an optional distance, or skip.
+- **Lifting:** one card per movement slot, in slot order. Drag the top card: → done, ← later,
+  ↑ like (the card stays), ↓ equipment unavailable (the slot gets another variation, and the
+  equipment is marked at the workout's gym for 7 days). The card labels the action while you drag,
+  and right, left and up swipes can be undone from the toolbar. Each card shows last session's sets,
+  today's sets, reps and weight steppers prefilled from last time, "+5 lb" and **Log set**; its ⋯
+  menu has swap variation, like/unlike and never show. A card with sets logged keeps its exercise
+  (no down-swipe, swap or hide). **Add exercise** and **Finish lifting** sit under the stack.
+- **Cool-down:** the day's stretch list for now, then **Finish workout**. Finishing moves the split
+  to the next day if any set was logged.
+
+`App/Features/Workout/WorkoutFlow.swift` holds every workout action. Each one rebuilds the
+`WorkoutStack` from the saved `WorkoutSession`, applies the change and saves straight away, so a
+force-quit never loses a set. Schema version 2 (`App/Persistence/SchemaV2.swift`) added each card's
+slot movement type so the stack rebuilds exactly; version 1 stores migrate automatically.
 
 ## CI
 
