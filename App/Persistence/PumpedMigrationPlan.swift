@@ -1,18 +1,35 @@
+import Foundation
 import SwiftData
 
 /// Ordered list of every schema version the store has had. Add new versions and stages here.
 enum PumpedMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [PumpedSchemaV1.self] }
-    static var stages: [MigrationStage] { [] }
+    static var schemas: [any VersionedSchema.Type] { [PumpedSchemaV1.self, PumpedSchemaV2.self] }
+
+    static var stages: [MigrationStage] {
+        [
+            // Adds `WorkoutEntry.movementTypeID` (optional, so existing rows read nil).
+            .lightweight(fromVersion: PumpedSchemaV1.self, toVersion: PumpedSchemaV2.self),
+        ]
+    }
 }
 
 enum PumpedStore {
-    /// Builds the app's container. `inMemory` is for tests and previews.
+    /// Builds the app's container at the default location, or in memory for tests and previews.
     static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: PumpedSchemaV1.self)
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
-        return try ModelContainer(
-            for: schema,
+        let schema = Schema(versionedSchema: PumpedSchemaV2.self)
+        return try makeContainer(ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory))
+    }
+
+    /// Builds a container backed by the store file at `url`. Tests use it to reopen a store the way
+    /// a relaunch does.
+    static func makeContainer(url: URL) throws -> ModelContainer {
+        let schema = Schema(versionedSchema: PumpedSchemaV2.self)
+        return try makeContainer(ModelConfiguration(schema: schema, url: url))
+    }
+
+    private static func makeContainer(_ configuration: ModelConfiguration) throws -> ModelContainer {
+        try ModelContainer(
+            for: Schema(versionedSchema: PumpedSchemaV2.self),
             migrationPlan: PumpedMigrationPlan.self,
             configurations: [configuration]
         )
