@@ -43,7 +43,7 @@ xcodebuild test -project Pumped.xcodeproj -scheme Pumped \
 | `Selection/` | `VariationSelector` picks an exercise per movement slot (spec §7): filters hidden, gym-unavailable and already-stacked exercises, weights by like/familiarity/repeat damping (all constants in `SelectionTuning`), and falls back to same-muscle substitutes. Takes an injected `RandomNumberGenerator`; `SeededGenerator` makes it deterministic. |
 | `Stack/` | `WorkoutStack`, the workout state machine: phases, enforced card order, the four swipes, swap, hide and added slots. A `Codable` value so the app can persist it after every change. |
 | `Workout/` | `SwipeClassifier` (turns a drag into one of the four swipes by distance or flick speed), `SetPrefill` (what the card's reps and weight steppers start at), `RestTimer` (absolute end date, skip, +30s), `CooldownPlayer` (stretch countdown with auto-advance that catches up after the background, pause, skip, back) and `WorkoutSummary`. |
-| `PRs/` | `PersonalRecords`: heaviest weight, best Epley e1RM and most reps at a weight, measured against earlier sets. |
+| `PRs/` | `PersonalRecords`: heaviest weight, best Epley e1RM and most reps at a weight, measured against earlier sets, plus the per-set check behind the card's PR badge and the PR timeline. `RecordBook` holds an exercise's current bests, and `ExerciseProgress` turns workouts into chart points (top set and e1RM). |
 | `Gyms/` | `EquipmentAvailability` (7-day unavailable-equipment window, reset on re-swipe) and `GymMatcher` (nearest known gym within 150 m). |
 
 ## Core logic tests (Mac or Linux)
@@ -108,6 +108,22 @@ unfinished one (the app also reopens it on launch). A workout runs warmup → li
 `WorkoutStack` from the saved `WorkoutSession`, applies the change and saves straight away, so a
 force-quit never loses a set. Schema version 2 (`App/Persistence/SchemaV2.swift`) added each card's
 slot movement type so the stack rebuilds exactly; version 1 stores migrate automatically.
+
+## History
+
+The **History** tab lists finished workouts, newest first (date, split day, gym, duration); swipe
+to delete one. A workout's detail shows the warmup, every set, the cool-down and the PRs it set.
+Tap a set to edit its reps or weight, or swipe to delete it. **Exercises** in the toolbar lists
+everything trained.
+
+An exercise's detail (from a workout, the exercises list, or the exercise name on a workout card)
+charts top-set weight and estimated 1RM per workout with Swift Charts, and a toggle widens the chart
+to every variation of the movement type. It also lists the exercise's records (heaviest weight,
+best e1RM, most reps at each weight), its PR history and each workout it was in.
+
+PRs are never stored: they're computed from the logged sets each time, so editing or deleting a set
+updates them everywhere. While lifting, the card shows a PR badge as soon as a logged set beats the
+exercise's history. `App/Features/History/HistoryData.swift` holds the queries and edits.
 
 ## CI
 

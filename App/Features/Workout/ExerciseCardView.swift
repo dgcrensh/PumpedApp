@@ -12,6 +12,11 @@ struct ExerciseCardView: View {
     let onHide: () -> Void
 
     @State private var lastTime: LastTime?
+    /// Every earlier set of this exercise, for the PR badge.
+    @State private var history: [SetValues] = []
+    /// Records the set just logged broke, for the "New PR" flash.
+    @State private var newRecords: [PersonalRecord] = []
+    @State private var showsProgress = false
     @State private var slotName = ""
     @State private var reps = SetValues.fallback.reps
     @State private var weight = SetValues.fallback.weightLb
@@ -40,6 +45,19 @@ struct ExerciseCardView: View {
         .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
         .sensoryFeedback(.success, trigger: entry.sets.count) { old, new in new > old }
         .task(id: entry.exercise?.id) { load() }
+        .sheet(isPresented: $showsProgress) {
+            if let exercise = entry.exercise {
+                NavigationStack {
+                    ExerciseDetailView(exercise: exercise)
+                        .historyDestinations()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showsProgress = false }
+                            }
+                        }
+                }
+            }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -61,9 +79,24 @@ struct ExerciseCardView: View {
                         .foregroundStyle(.orange)
                         .background(.orange.opacity(0.15), in: Capsule())
                 }
-                Text(entry.exercise?.name ?? "No available variation")
-                    .font(.title2.bold())
+                if let exercise = entry.exercise {
+                    Button {
+                        showsProgress = true
+                    } label: {
+                        Text(exercise.name)
+                            .font(.title2.bold())
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
                     .accessibilityAddTraits(.isHeader)
+                    .accessibilityHint("Shows progress and PRs")
+                    .accessibilityIdentifier("card-exercise-name")
+                } else {
+                    Text("No available variation")
+                        .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
+                }
                 if let exercise = entry.exercise {
                     Text(subtitle(for: exercise))
                         .font(.subheadline)
@@ -133,12 +166,37 @@ struct ExerciseCardView: View {
                     Spacer(minLength: 8)
                     Button {
                         if let last = today.last { WorkoutFlow.deleteSet(last, in: context) }
+                        newRecords = []
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
                     }
                     .accessibilityLabel("Remove last set")
                 }
+                prBadge(today.map(WorkoutFlow.values))
             }
+        }
+    }
+
+    /// Today's PRs on this card (spec §9), recomputed as sets are logged or removed.
+    @ViewBuilder
+    private func prBadge(_ today: [SetValues]) -> some View {
+        let records = PersonalRecords.hits(today: today, history: history)
+        if !records.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(newRecords.isEmpty ? "PR" : "New PR!", systemImage: "trophy.fill")
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .foregroundStyle(.black)
+                    .background(.yellow, in: Capsule())
+                ForEach(Array(records.enumerated()), id: \.offset) { _, record in
+                    Text(record.summary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("pr-badge")
         }
     }
 
@@ -194,7 +252,13 @@ struct ExerciseCardView: View {
 
     private func logSet() {
         isEditingWeight = false
-        WorkoutFlow.logSet(SetValues(reps: reps, weightLb: max(weight, 0)), on: entry, in: context)
+        let values = SetValues(reps: reps, weightLb: max(weight, 0))
+        newRecords = PersonalRecords.newRecords(
+            set: values,
+            earlierToday: entry.orderedSets.map(WorkoutFlow.values),
+            history: history
+        )
+        WorkoutFlow.logSet(values, on: entry, in: context)
         RestTimerService.sync(session)
         prefill()
     }
@@ -206,6 +270,8 @@ struct ExerciseCardView: View {
         lastTime = entry.exercise
             .flatMap { WorkoutFlow.lastSets(of: $0.id, before: session, in: context) }
             .map { LastTime(date: $0.date, sets: $0.sets) }
+        history = entry.exercise.map { WorkoutFlow.allSets(of: $0.id, before: session, in: context) } ?? []
+        newRecords = []
         prefill()
     }
 
