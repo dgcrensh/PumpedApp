@@ -28,6 +28,7 @@ struct ExerciseCardView: View {
             if let exercise = entry.exercise {
                 history(for: exercise)
                 Divider()
+                RestTimerView(session: session)
                 logging
             } else {
                 unavailable
@@ -194,6 +195,7 @@ struct ExerciseCardView: View {
     private func logSet() {
         isEditingWeight = false
         WorkoutFlow.logSet(SetValues(reps: reps, weightLb: max(weight, 0)), on: entry, in: context)
+        RestTimerService.sync(session)
         prefill()
     }
 

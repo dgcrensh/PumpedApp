@@ -113,6 +113,7 @@ enum WorkoutFlow {
         return session.entries.first { $0.slotOrder == id }
     }
 
+    /// Logs a set and starts the rest timer for the exercise's type (spec §6.2).
     @discardableResult
     static func logSet(
         _ values: SetValues,
@@ -123,6 +124,11 @@ enum WorkoutFlow {
         let set = SetLog(reps: values.reps, weightLb: values.weightLb, loggedAt: now)
         context.insert(set)
         entry.sets.append(set)
+        if let session = entry.session {
+            var timer = restTimer(of: session)
+            timer.start(seconds: restSeconds(for: entry.exercise, in: context), at: now)
+            session.restTimerEndsAt = timer.endsAt
+        }
         save(context)
         return set
     }
@@ -130,6 +136,38 @@ enum WorkoutFlow {
     static func deleteSet(_ set: SetLog, in context: ModelContext) {
         set.entry?.sets.removeAll { $0 === set }
         context.delete(set)
+        save(context)
+    }
+
+    // MARK: Rest timer
+
+    static func restTimer(of session: WorkoutSession) -> RestTimer {
+        RestTimer(endsAt: session.restTimerEndsAt)
+    }
+
+    /// The rest after a set of `exercise`, from Settings. Compound when the card is empty.
+    static func restSeconds(for exercise: Exercise?, in context: ModelContext) -> Int {
+        restTimerSettings(in: context).seconds(for: exercise?.exerciseType ?? .compound)
+    }
+
+    /// The settings row, created with the defaults if it's missing.
+    static func restTimerSettings(in context: ModelContext) -> RestTimerSettings {
+        if let settings = try? context.fetch(FetchDescriptor<RestTimerSettings>()).first { return settings }
+        let settings = RestTimerSettings()
+        context.insert(settings)
+        return settings
+    }
+
+    static func skipRest(in session: WorkoutSession, context: ModelContext) {
+        session.restTimerEndsAt = nil
+        save(context)
+    }
+
+    /// "+30s".
+    static func extendRest(in session: WorkoutSession, at now: Date = .now, context: ModelContext) {
+        var timer = restTimer(of: session)
+        timer.extend(at: now)
+        session.restTimerEndsAt = timer.endsAt
         save(context)
     }
 
@@ -252,6 +290,7 @@ enum WorkoutFlow {
         stack.startLifting()
         guard stack.finishLifting() else { return }
         write(stack, to: session, in: context)
+        session.restTimerEndsAt = nil
         save(context)
     }
 
@@ -271,6 +310,7 @@ enum WorkoutFlow {
         write(stack, to: session, in: context)
         session.endedAt = now
         session.cooldownCompleted = cooldownCompleted
+        session.restTimerEndsAt = nil
         if hasLoggedSets(session), let split = session.split {
             advance(split, past: session.splitDay)
         }
@@ -301,6 +341,29 @@ enum WorkoutFlow {
             if !sets.isEmpty { return (past.startedAt, sets.map(values)) }
         }
         return nil
+    }
+
+    /// Every set of the exercise from finished workouts that started before `session`.
+    static func allSets(of exerciseID: String, before session: WorkoutSession, in context: ModelContext) -> [SetValues] {
+        finishedSessions(in: context)
+            .filter { $0 !== session && $0.startedAt < session.startedAt }
+            .flatMap { $0.entries.filter { $0.exercise?.id == exerciseID }.flatMap(\.orderedSets) }
+            .map(values)
+    }
+
+    /// The end-of-workout numbers (spec §6.4), with PRs measured against earlier workouts.
+    static func summary(of session: WorkoutSession, in context: ModelContext) -> WorkoutSummary {
+        let exercises = session.entries
+            .sorted { $0.slotOrder < $1.slotOrder }
+            .compactMap { entry -> WorkoutSummary.Exercise? in
+                guard let exercise = entry.exercise else { return nil }
+                return WorkoutSummary.Exercise(
+                    name: exercise.name,
+                    sets: entry.orderedSets.map(values),
+                    history: allSets(of: exercise.id, before: session, in: context)
+                )
+            }
+        return WorkoutSummary(startedAt: session.startedAt, endedAt: session.endedAt ?? .now, exercises: exercises)
     }
 
     static func values(_ set: SetLog) -> SetValues {
