@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 
 /// Data UI tests ask for with launch arguments. Only used with the in-memory store.
