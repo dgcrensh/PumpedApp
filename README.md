@@ -42,7 +42,8 @@ xcodebuild test -project Pumped.xcodeproj -scheme Pumped \
 |---|---|
 | `Selection/` | `VariationSelector` picks an exercise per movement slot (spec §7): filters hidden, gym-unavailable and already-stacked exercises, weights by like/familiarity/repeat damping (all constants in `SelectionTuning`), and falls back to same-muscle substitutes. Takes an injected `RandomNumberGenerator`; `SeededGenerator` makes it deterministic. |
 | `Stack/` | `WorkoutStack`, the workout state machine: phases, enforced card order, the four swipes, swap, hide and added slots. A `Codable` value so the app can persist it after every change. |
-| `Workout/` | `SwipeClassifier` (turns a drag into one of the four swipes by distance or flick speed) and `SetPrefill` (what the card's reps and weight steppers start at). |
+| `Workout/` | `SwipeClassifier` (turns a drag into one of the four swipes by distance or flick speed), `SetPrefill` (what the card's reps and weight steppers start at), `RestTimer` (absolute end date, skip, +30s), `CooldownPlayer` (stretch countdown with auto-advance that catches up after the background, pause, skip, back) and `WorkoutSummary`. |
+| `PRs/` | `PersonalRecords`: heaviest weight, best Epley e1RM and most reps at a weight, measured against earlier sets. |
 | `Gyms/` | `EquipmentAvailability` (7-day unavailable-equipment window, reset on re-swipe) and `GymMatcher` (nearest known gym within 150 m). |
 
 ## Core logic tests (Mac or Linux)
@@ -91,8 +92,17 @@ unfinished one (the app also reopens it on launch). A workout runs warmup → li
   today's sets, reps and weight steppers prefilled from last time, "+5 lb" and **Log set**; its ⋯
   menu has swap variation, like/unlike and never show. A card with sets logged keeps its exercise
   (no down-swipe, swap or hide). **Add exercise** and **Finish lifting** sit under the stack.
-- **Cool-down:** the day's stretch list for now, then **Finish workout**. Finishing moves the split
-  to the next day if any set was logged.
+- **Rest timer:** logging a set starts a countdown on the card, sized by the exercise's type
+  (Settings → Rest timers; defaults 3:00 heavy compound, 2:00 compound, 1:00 isolation), with
+  **Skip** and **+30s**. A haptic plays at zero, and a local notification is scheduled for the end
+  so it still alerts with the app in the background or the phone locked. The end time is saved on
+  the workout, so it survives a relaunch. Notification permission is asked when the first workout
+  starts.
+- **Cool-down:** the day's stretches one at a time, full screen, with a countdown that moves on by
+  itself (with a haptic), plus back, pause and skip. Progress is kept per workout, so a relaunch
+  picks up where it was. **Finish workout** or **Skip cool-down** ends the workout.
+- **Summary:** duration, exercises, sets, volume and any PRs hit. Finishing moves the split to the
+  next day if any set was logged.
 
 `App/Features/Workout/WorkoutFlow.swift` holds every workout action. Each one rebuilds the
 `WorkoutStack` from the saved `WorkoutSession`, applies the change and saves straight away, so a

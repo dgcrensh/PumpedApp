@@ -22,15 +22,23 @@ struct ActiveWorkoutView: View {
                     WarmupView(session: session)
                 case .lifting:
                     LiftingView(session: session, undo: $undo)
-                case .cooldown, .complete:
-                    CooldownView(session: session, undo: $undo) { dismiss() }
+                case .cooldown:
+                    CooldownView(session: session, undo: $undo)
+                case .complete:
+                    WorkoutSummaryView(session: session) { dismiss() }
                 }
             }
             .navigationTitle(session.splitDay?.name ?? "Workout")
             .navigationBarTitleDisplayMode(.inline)
+            // Swipes, undo and Finish lifting all change the phase; the rest notification only
+            // belongs to lifting.
+            .onChange(of: session.phase) { RestTimerService.sync(session) }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    // The summary has its own Done button.
+                    if session.phase != .complete {
+                        Button("Close") { dismiss() }
+                    }
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
                     if let undo {
@@ -41,15 +49,18 @@ struct ActiveWorkoutView: View {
                             Label("Undo \(undo.direction.actionName.lowercased())", systemImage: "arrow.uturn.backward")
                         }
                     }
-                    Menu {
-                        Button("Discard workout", role: .destructive) { isConfirmingDiscard = true }
-                    } label: {
-                        Label("More", systemImage: "ellipsis.circle")
+                    if session.phase != .complete {
+                        Menu {
+                            Button("Discard workout", role: .destructive) { isConfirmingDiscard = true }
+                        } label: {
+                            Label("More", systemImage: "ellipsis.circle")
+                        }
                     }
                 }
             }
             .confirmationDialog("Discard this workout?", isPresented: $isConfirmingDiscard, titleVisibility: .visible) {
                 Button("Discard workout", role: .destructive) {
+                    RestTimerService.cancel()
                     onDiscard()
                     dismiss()
                 }

@@ -112,7 +112,58 @@ final class WorkoutFlowTests: XCTestCase {
         XCTAssertEqual(exercise?.isHidden, false)
     }
 
-    // MARK: Card menu and extra slots
+    // MARK: Rest timer
+
+    func testLoggingASetStartsTheRestForTheExerciseType() throws {
+        let settings = WorkoutFlow.restTimerSettings(in: context)
+        settings.heavyCompoundSec = 200
+        settings.compoundSec = 100
+        settings.isolationSec = 50
+        let session = try liftingSession(slots: ["horizontal-press"])
+        let card = try XCTUnwrap(WorkoutFlow.currentEntry(of: session))
+        let type = try XCTUnwrap(card.exercise?.exerciseType)
+        let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
+
+        WorkoutFlow.logSet(SetValues(reps: 8, weightLb: 135), on: card, at: now, in: context)
+        XCTAssertEqual(session.restTimerEndsAt, now.addingTimeInterval(TimeInterval(settings.seconds(for: type))))
+        XCTAssertEqual(WorkoutFlow.restSeconds(for: card.exercise, in: context), [200, 100, 50][ExerciseType.allCases.firstIndex(of: type)!])
+
+        // The next set restarts it from that set.
+        let later = now.addingTimeInterval(30)
+        WorkoutFlow.logSet(SetValues(reps: 8, weightLb: 135), on: card, at: later, in: context)
+        XCTAssertEqual(session.restTimerEndsAt, later.addingTimeInterval(TimeInterval(settings.seconds(for: type))))
+    }
+
+    func testRestDefaultsComeFromTheSeededSettings() throws {
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<RestTimerSettings>()), 1)
+        let settings = WorkoutFlow.restTimerSettings(in: context)
+        XCTAssertEqual([settings.heavyCompoundSec, settings.compoundSec, settings.isolationSec], [180, 120, 60])
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<RestTimerSettings>()), 1, "no second row")
+    }
+
+    func testSkipAndExtendRest() throws {
+        let session = try liftingSession(slots: ["horizontal-press"])
+        let card = try XCTUnwrap(WorkoutFlow.currentEntry(of: session))
+        let now = Date.now
+        WorkoutFlow.logSet(SetValues(reps: 8, weightLb: 135), on: card, at: now, in: context)
+        let endsAt = try XCTUnwrap(session.restTimerEndsAt)
+
+        WorkoutFlow.extendRest(in: session, at: now, context: context)
+        XCTAssertEqual(session.restTimerEndsAt, endsAt.addingTimeInterval(30))
+
+        WorkoutFlow.skipRest(in: session, context: context)
+        XCTAssertNil(session.restTimerEndsAt)
+    }
+
+    func testRestStopsWhenLiftingEnds() throws {
+        let session = try liftingSession(slots: ["horizontal-press", "chest-fly"])
+        WorkoutFlow.logSet(SetValues(reps: 8, weightLb: 135), on: try XCTUnwrap(WorkoutFlow.currentEntry(of: session)), in: context)
+        XCTAssertNotNil(session.restTimerEndsAt)
+        WorkoutFlow.finishLifting(session, in: context)
+        XCTAssertEqual(session.phase, .cooldown)
+        XCTAssertNil(session.restTimerEndsAt)
+    }
+
 
     func testHideCurrentHidesAndRefills() throws {
         let session = try liftingSession(slots: ["horizontal-press"])
@@ -138,6 +189,7 @@ final class WorkoutFlowTests: XCTestCase {
 
         let expectedStack: WorkoutStack
         let exerciseID: String?
+        let restEndsAt: Date?
         do {
             container = try PumpedStore.makeContainer(url: url)
             SeedImporter.importBundledSeedIfNeeded(into: context)
@@ -148,6 +200,7 @@ final class WorkoutFlowTests: XCTestCase {
             WorkoutFlow.logSet(SetValues(reps: 6, weightLb: 140), on: current, in: context)
             _ = WorkoutFlow.swipe(.left, in: session, context: context, using: &rng)
             expectedStack = WorkoutFlow.stack(of: session)
+            restEndsAt = session.restTimerEndsAt
         }
 
         // A fresh container on the same file, as after a force-quit.
@@ -155,6 +208,8 @@ final class WorkoutFlowTests: XCTestCase {
         container = try PumpedStore.makeContainer(url: url)
         let resumed = try XCTUnwrap(WorkoutFlow.activeSession(in: context))
         XCTAssertEqual(WorkoutFlow.stack(of: resumed), expectedStack)
+        XCTAssertNotNil(restEndsAt)
+        XCTAssertEqual(resumed.restTimerEndsAt, restEndsAt, "the rest timer keeps its end across a relaunch")
         XCTAssertEqual(resumed.phase, .lifting)
         let pressCard = try XCTUnwrap(resumed.entries.first { $0.slotOrder == 0 })
         XCTAssertEqual(pressCard.exercise?.id, exerciseID)
@@ -182,6 +237,33 @@ final class WorkoutFlowTests: XCTestCase {
         WorkoutFlow.finish(real, cooldownCompleted: true, in: context)
         XCTAssertTrue(real.cooldownCompleted)
         XCTAssertEqual(SplitEditing.nextDay(of: split)?.name, "Pull")
+    }
+
+    func testSummaryCountsTodaysSetsAndPRs() throws {
+        let (split, push) = try pushPull(pushSlots: ["horizontal-press", "chest-fly"])
+        let first = WorkoutFlow.start(day: push, of: split, gym: nil, at: .now.addingTimeInterval(-86_400), in: context, using: &rng)
+        WorkoutFlow.skipWarmup(first, in: context)
+        let firstCard = try XCTUnwrap(WorkoutFlow.currentEntry(of: first))
+        let exerciseID = try XCTUnwrap(firstCard.exercise?.id)
+        WorkoutFlow.logSet(SetValues(reps: 8, weightLb: 135), on: firstCard, in: context)
+        WorkoutFlow.finish(first, cooldownCompleted: true, in: context)
+
+        let start = Date.now
+        let second = WorkoutFlow.start(day: push, of: split, gym: nil, at: start, in: context, using: &rng)
+        WorkoutFlow.skipWarmup(second, in: context)
+        XCTAssertEqual(WorkoutFlow.swapCurrent(to: exerciseID, in: second, context: context), .applied)
+        let card = try XCTUnwrap(WorkoutFlow.currentEntry(of: second))
+        WorkoutFlow.logSet(SetValues(reps: 8, weightLb: 135), on: card, in: context)
+        WorkoutFlow.logSet(SetValues(reps: 6, weightLb: 145), on: card, in: context)
+        WorkoutFlow.finish(second, cooldownCompleted: true, at: start.addingTimeInterval(45 * 60), in: context)
+
+        let summary = WorkoutFlow.summary(of: second, in: context)
+        XCTAssertEqual(summary.duration, 45 * 60)
+        XCTAssertEqual(summary.exerciseNames, [try XCTUnwrap(card.exercise?.name)])
+        XCTAssertEqual(summary.setCount, 2)
+        XCTAssertEqual(summary.volumeLb, 8 * 135 + 6 * 145)
+        XCTAssertEqual(summary.prs.first?.record, .heaviestWeight(145))
+        XCTAssertEqual(WorkoutFlow.summary(of: first, in: context).prs, [], "nothing to beat the first time")
     }
 
     func testDiscardDeletesTheWorkoutAndKeepsTheSplit() throws {

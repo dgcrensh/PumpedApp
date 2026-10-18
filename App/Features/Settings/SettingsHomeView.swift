@@ -38,6 +38,11 @@ struct SettingsHomeView: View {
                 } header: {
                     Text("Exercise library")
                 }
+                Section("Workout") {
+                    NavigationLink("Rest timers") {
+                        RestTimerSettingsView()
+                    }
+                }
             }
             .navigationTitle("Settings")
         }

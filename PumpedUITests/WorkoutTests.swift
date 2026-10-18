@@ -1,7 +1,8 @@
 import XCTest
 
 final class WorkoutTests: XCTestCase {
-    /// Start → skip warmup → log a set → swipe the card away → finish lifting → finish the workout.
+    /// Start → skip warmup → log a set (rest timer starts, then skip it) → swipe the card away →
+    /// finish lifting → finish the workout → summary.
     @MainActor
     func testLiftingSessionHappyPath() throws {
         let app = XCUIApplication()
@@ -20,6 +21,10 @@ final class WorkoutTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["0 of 2 done"].exists)
         logSet.tap()
         XCTAssertTrue(app.staticTexts["today-sets"].waitForExistence(timeout: 5))
+        let skipRest = app.buttons["Skip rest"]
+        XCTAssertTrue(skipRest.waitForExistence(timeout: 5), "logging a set starts the rest timer")
+        skipRest.tap()
+        XCTAssertTrue(skipRest.waitForNonExistence(timeout: 5))
 
         app.descendants(matching: .any)["exercise-card"].firstMatch.swipeRight()
         XCTAssertTrue(app.staticTexts["1 of 2 done"].waitForExistence(timeout: 5))
@@ -33,6 +38,9 @@ final class WorkoutTests: XCTestCase {
         let finish = app.buttons["Finish workout"]
         XCTAssertTrue(finish.waitForExistence(timeout: 5))
         finish.tap()
+
+        XCTAssertTrue(app.navigationBars["Workout complete"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
 
         // Back on the Workout tab, with the split moved on to the next day.
         XCTAssertTrue(element(in: app, labelStartingWith: "Pull").waitForExistence(timeout: 5))

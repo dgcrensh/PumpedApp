@@ -95,6 +95,8 @@ struct WorkoutHomeView: View {
         }
         .safeAreaInset(edge: .bottom) {
             bigButton("Start workout") {
+                // The rest timer notifies at zero; ask the first time a workout starts.
+                Task { await RestTimerService.requestPermission() }
                 var rng = SystemRandomNumberGenerator()
                 presented = WorkoutFlow.start(
                     day: day,
