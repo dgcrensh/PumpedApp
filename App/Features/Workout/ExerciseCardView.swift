@@ -295,7 +295,7 @@ struct ExerciseCardView: View {
                 }
             }
             Button(action: logSet) {
-                Text("Log set \(entry.sets.count + 1)")
+                Text("LOG SET \(entry.sets.count + 1)")
             }
             .buttonStyle(.nightShiftPrimary)
             .accessibilityLabel("Log set")

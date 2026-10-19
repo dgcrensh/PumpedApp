@@ -48,6 +48,9 @@ struct NightShiftLabel: View {
 }
 
 /// The volt button for the one main action on a screen: Start, Log set, Finish.
+///
+/// It doesn't change the label's case: `textCase` would also reach the button's accessibility
+/// label, so callers that want capitals write them and set a sentence-case accessibility label.
 struct NightShiftPrimaryButtonStyle: ButtonStyle {
     /// Off for buttons that sit inline, like an empty state's action.
     var fillsWidth = true
@@ -57,7 +60,6 @@ struct NightShiftPrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(NightShift.display(.title3))
             .tracking(1)
-            .textCase(.uppercase)
             .foregroundStyle(NightShift.onAccent)
             .padding(.horizontal, 20)
             .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: fillsWidth ? 56 : 44)

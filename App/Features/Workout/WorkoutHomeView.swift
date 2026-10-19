@@ -174,7 +174,7 @@ struct WorkoutHomeView: View {
 
     private func bigButton(_ title: String, accessibilityLabel: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: "play.fill")
+            Label(title.uppercased(), systemImage: "play.fill")
         }
         .buttonStyle(.nightShiftPrimary)
         .accessibilityLabel(accessibilityLabel ?? title)
