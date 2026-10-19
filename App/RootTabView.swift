@@ -13,6 +13,9 @@ struct RootTabView: View {
             SettingsHomeView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
+        .toolbarBackground(NightShift.background, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .nightShiftTheme()
     }
 }
 

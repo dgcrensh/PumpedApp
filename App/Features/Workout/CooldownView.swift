@@ -141,11 +141,8 @@ struct CooldownView: View {
                 finish(cooldownCompleted: true)
             } label: {
                 Text("Finish workout")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.nightShiftPrimary)
             if player?.isFinished != true {
                 Button("Skip cool-down") { finish(cooldownCompleted: false) }
             }

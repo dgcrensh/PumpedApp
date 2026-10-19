@@ -19,6 +19,8 @@ struct SplitDetailView: View {
             Section {
                 if let nextUp = SplitCycleText.nextUp(for: split) {
                     Text(nextUp)
+                        .font(NightShift.display(.title3, weight: .bold))
+                        .foregroundStyle(NightShift.accent)
                     Picker("Next day", selection: nextDayIndex) {
                         ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
                             Text(day.name).tag(index)
@@ -30,7 +32,7 @@ struct SplitDetailView: View {
                 }
                 if split.isActive {
                     Label("Active split", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(NightShift.accent)
                 } else {
                     Button("Make active") { SplitEditing.setActive(split, in: context) }
                 }
@@ -41,17 +43,29 @@ struct SplitDetailView: View {
             }
 
             Section("Days") {
-                ForEach(days) { day in
+                let next = SplitCycle(dayCount: days.count, nextDayIndex: split.nextDayIndex).nextDayIndex
+                ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
                     NavigationLink {
                         SplitDayEditorView(day: day)
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
+                            NightShiftLabel(
+                                text: index == next ? "Next up" : "Day \(index + 1)",
+                                color: index == next ? NightShift.accent : NightShift.muted
+                            )
                             Text(day.name)
+                                .font(NightShift.display(.title2))
+                                .textCase(.uppercase)
                             Text(daySummary(day))
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(NightShift.muted)
                         }
+                        .padding(.vertical, 4)
+                        // Name first, so the row reads (and is found) by its day.
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("\(day.name), \(index == next ? "next up" : "day \(index + 1)"), \(daySummary(day))")
                     }
+                    .listRowBackground(index == next ? NightShift.raised : NightShift.surface)
                 }
                 .onDelete { SplitEditing.deleteDays(at: $0, from: split, in: context) }
                 .onMove { SplitEditing.moveDays(of: split, fromOffsets: $0, toOffset: $1) }
@@ -64,6 +78,7 @@ struct SplitDetailView: View {
                 }
             }
         }
+        .nightShiftList()
         .navigationTitle(split.name.isEmpty ? "Split" : split.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

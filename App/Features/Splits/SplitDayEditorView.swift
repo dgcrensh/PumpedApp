@@ -19,10 +19,25 @@ struct SplitDayEditorView: View {
             Section {
                 if slots.isEmpty {
                     Text("No movements yet. A workout of this day has nothing to lift until you add some.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(NightShift.muted)
                 }
-                ForEach(slots) { slot in
-                    Text(slot.movementType?.name ?? "Missing movement")
+                ForEach(Array(slots.enumerated()), id: \.element.id) { index, slot in
+                    HStack(spacing: 14) {
+                        Text(String(format: "%02d", index + 1))
+                            .font(NightShift.display(.body, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundStyle(NightShift.faint)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(slot.movementType?.name ?? "Missing movement")
+                                .font(.body.weight(.semibold))
+                            if let muscles = slot.movementType?.primaryMuscles, !muscles.isEmpty {
+                                Text(MuscleGroupNames.list(muscles))
+                                    .font(.caption)
+                                    .foregroundStyle(NightShift.muted)
+                            }
+                        }
+                    }
                 }
                 .onDelete { SplitEditing.deleteSlots(at: $0, from: day, in: context) }
                 .onMove { SplitEditing.moveSlots(of: day, fromOffsets: $0, toOffset: $1) }
@@ -56,6 +71,7 @@ struct SplitDayEditorView: View {
                 }
             }
         }
+        .nightShiftList()
         .navigationTitle(day.name.isEmpty ? "Day" : day.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

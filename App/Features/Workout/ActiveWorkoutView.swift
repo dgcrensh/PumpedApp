@@ -31,6 +31,8 @@ struct ActiveWorkoutView: View {
             }
             .navigationTitle(session.splitDay?.name ?? "Workout")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(NightShift.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             // Swipes, undo and Finish lifting all change the phase; the rest notification only
             // belongs to lifting.
             .onChange(of: session.phase) { RestTimerService.sync(session) }
@@ -77,5 +79,6 @@ struct ActiveWorkoutView: View {
                 Text("Its sets are deleted and the split stays on this day.")
             }
         }
+        .nightShiftTheme()
     }
 }

@@ -48,7 +48,7 @@ struct SplitsHomeView: View {
                         Text("A split is a cycle of days, like Push, Pull, Legs.")
                     } actions: {
                         Button("Create a split") { startNaming() }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.nightShiftPrimaryInline)
                     }
                     .padding(.bottom, 120)
                 }
