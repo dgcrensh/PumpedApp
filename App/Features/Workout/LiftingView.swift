@@ -40,7 +40,7 @@ struct LiftingView: View {
             controls
         }
         .padding()
-        .background(Color(.systemGroupedBackground))
+        .background(NightShift.background)
         .overlay(alignment: .bottom) { noticeBanner }
         .sensoryFeedback(.impact(weight: .medium), trigger: swipes)
         .task(id: notice) {
@@ -125,19 +125,30 @@ struct LiftingView: View {
     private func progress(_ stack: WorkoutStack) -> some View {
         let total = stack.entries.count
         let done = stack.entries.filter { $0.status == .done }.count
-        return HStack {
-            Text("\(done) of \(total) done")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button {
-                isChangingGym = true
-            } label: {
-                Label(session.gym?.name ?? "No gym", systemImage: "mappin.and.ellipse")
-                    .font(.subheadline)
+        return VStack(spacing: 10) {
+            HStack {
+                Text("\(done) of \(total) done")
+                    .font(NightShift.display(.subheadline, weight: .bold))
+                    .foregroundStyle(NightShift.muted)
+                Spacer()
+                Button {
+                    isChangingGym = true
+                } label: {
+                    Label(session.gym?.name ?? "No gym", systemImage: "mappin.and.ellipse")
+                }
+                .buttonStyle(.nightShiftSecondary)
+                .accessibilityIdentifier("workout-gym")
+                .accessibilityHint("Changes the gym")
             }
-            .accessibilityIdentifier("workout-gym")
-            .accessibilityHint("Changes the gym")
+            // One segment per card: done, the one on top, then the rest.
+            HStack(spacing: 4) {
+                ForEach(0..<total, id: \.self) { index in
+                    Capsule()
+                        .fill(index < done ? NightShift.accent : index == done && stack.current != nil ? NightShift.text : NightShift.line)
+                        .frame(height: 4)
+                }
+            }
+            .accessibilityHidden(true)
         }
     }
 
@@ -145,9 +156,9 @@ struct LiftingView: View {
     private func cardsBehind(_ count: Int) -> some View {
         ZStack {
             ForEach(Array((1...2).filter { $0 <= count }.reversed()), id: \.self) { depth in
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                    .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(depth == 1 ? NightShift.surface : NightShift.background)
+                    .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(NightShift.line))
                     .padding(.horizontal, CGFloat(depth) * 14)
                     .offset(y: CGFloat(depth) * 12)
             }
@@ -163,14 +174,14 @@ struct LiftingView: View {
             } label: {
                 Label("Add exercise", systemImage: "plus")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.nightShiftSecondary)
             if !dynamicTypeSize.isAccessibilitySize { Spacer() }
             Button {
                 isConfirmingFinish = true
             } label: {
                 Label("Finish lifting", systemImage: "flag.checkered")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.nightShiftSecondary)
         }
     }
 

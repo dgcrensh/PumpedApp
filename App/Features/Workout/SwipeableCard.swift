@@ -2,7 +2,7 @@ import PumpedCore
 import SwiftUI
 
 extension SwipeDirection {
-    /// The action's name on the card while dragging, and for VoiceOver.
+    /// The action's name, for Undo.
     var actionName: String {
         switch self {
         case .right: "Done"
@@ -76,8 +76,9 @@ extension View {
     }
 }
 
-/// The draggable top card. Recognizes the four swipes with `SwipeClassifier`, labels the action
-/// while dragging, and animates the card away before reporting the swipe.
+/// The draggable top card. Recognizes the four swipes with `SwipeClassifier` and animates the card
+/// away before reporting the swipe. The card's movement and tilt are the only feedback while
+/// dragging: no direction labels are shown on it.
 ///
 /// Directions not in `enabled` spring back. A like (up) bounces back, since that card stays.
 /// With `allowsDrag` off (large accessibility text, where the card scrolls instead) the swipes are
@@ -95,31 +96,11 @@ struct SwipeableCard<Content: View>: View {
     var body: some View {
         content()
             .environment(\.cardSwipeActions, CardSwipeActions(enabled: enabled, perform: report))
-            .overlay(alignment: .top) { dragLabel }
             .offset(offset)
             .rotationEffect(.degrees(Double(offset.width) / 25), anchor: .bottom)
             .gesture(drag, including: allowsDrag ? .all : .subviews)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("exercise-card")
-    }
-
-    @ViewBuilder
-    private var dragLabel: some View {
-        let translation = vector(offset)
-        if let direction = classifier.direction(of: translation), !isCommitting || direction == .up {
-            let isEnabled = enabled.contains(direction)
-            Label(isEnabled ? direction.actionName : "Not now", systemImage: isEnabled ? direction.systemImage : "xmark.circle")
-                .font(.title2.weight(.heavy))
-                .textCase(.uppercase)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .foregroundStyle(isEnabled ? direction.tint : .secondary)
-                .background(.thinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(isEnabled ? direction.tint : .secondary, lineWidth: 3))
-                .opacity(classifier.progress(of: translation))
-                .padding(.top, 24)
-                .allowsHitTesting(false)
-        }
     }
 
     private var drag: some Gesture {

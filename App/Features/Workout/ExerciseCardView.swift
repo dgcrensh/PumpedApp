@@ -9,7 +9,7 @@ struct ExerciseCardView: View {
     @Environment(\.cardSwipeActions) private var swipeActions
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     /// Wide enough for "137.5" at the current text size.
-    @ScaledMetric(relativeTo: .title3) private var weightFieldWidth = 80.0
+    @ScaledMetric(relativeTo: .title) private var weightFieldWidth = 90.0
     let entry: WorkoutEntry
     let session: WorkoutSession
     let onSwap: () -> Void
@@ -32,21 +32,22 @@ struct ExerciseCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             header
             if let exercise = entry.exercise {
                 history(for: exercise)
-                Divider()
                 RestTimerView(session: session)
                 logging
             } else {
                 unavailable
             }
         }
-        .padding(20)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+        .background(NightShift.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(NightShift.line))
+        .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
         .sensoryFeedback(.success, trigger: entry.sets.count) { old, new in new > old }
         .task(id: entry.exercise?.id) { load() }
         .sheet(isPresented: $showsProgress) {
@@ -73,23 +74,29 @@ struct ExerciseCardView: View {
     // MARK: Sections
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                if entry.isSubstitute {
-                    Text("Substitute for \(slotName)")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .foregroundStyle(.orange)
-                        .background(.orange.opacity(0.15), in: Capsule())
-                }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center) {
+                movementChip
+                Spacer(minLength: 8)
+                menu
+            }
+            if entry.isSubstitute {
+                Text("Substitute for \(slotName)")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .foregroundStyle(.orange)
+                    .background(.orange.opacity(0.15), in: Capsule())
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if let exercise = entry.exercise {
                     Button {
                         showsProgress = true
                     } label: {
                         Text(exercise.name)
-                            .font(.title2.bold())
-                            .foregroundStyle(.primary)
+                            .font(NightShift.display(.title))
+                            .textCase(.uppercase)
+                            .foregroundStyle(NightShift.text)
                             .multilineTextAlignment(.leading)
                     }
                     .buttonStyle(.plain)
@@ -99,23 +106,41 @@ struct ExerciseCardView: View {
                     .cardSwipeAccessibilityActions(swipeActions)
                 } else {
                     Text("No available variation")
-                        .font(.title2.bold())
+                        .font(NightShift.display(.title))
+                        .textCase(.uppercase)
+                        .foregroundStyle(NightShift.text)
                         .accessibilityAddTraits(.isHeader)
                         .cardSwipeAccessibilityActions(swipeActions)
                 }
-                if let exercise = entry.exercise {
-                    Text(subtitle(for: exercise))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                if entry.exercise?.isLiked == true {
+                    Image(systemName: "heart.fill")
+                        .foregroundStyle(NightShift.accent)
+                        .accessibilityLabel("Liked")
                 }
             }
-            Spacer(minLength: 0)
-            if entry.exercise?.isLiked == true {
-                Image(systemName: "heart.fill")
-                    .foregroundStyle(.pink)
-                    .accessibilityLabel("Liked")
+            if let exercise = entry.exercise {
+                Text(equipmentText(for: exercise))
+                    .font(.subheadline)
+                    .foregroundStyle(NightShift.muted)
+                    .accessibilityLabel(subtitle(for: exercise))
             }
-            menu
+        }
+    }
+
+    /// The slot's movement, above the name. VoiceOver hears it with the equipment instead.
+    @ViewBuilder
+    private var movementChip: some View {
+        let movement = entry.exercise?.movementType?.name ?? slotName
+        if !movement.isEmpty {
+            Text(movement)
+                .font(NightShift.display(.footnote, weight: .bold))
+                .tracking(1.2)
+                .textCase(.uppercase)
+                .foregroundStyle(NightShift.accent)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(NightShift.background, in: Capsule())
+                .accessibilityHidden(true)
         }
     }
 
@@ -145,36 +170,54 @@ struct ExerciseCardView: View {
                 .disabled(!entry.sets.isEmpty)
             }
         } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.title2)
-                .padding(4)
+            Image(systemName: "ellipsis")
+                .font(.body.weight(.bold))
+                .foregroundStyle(NightShift.text)
+                .frame(width: 44, height: 44)
+                .background(NightShift.raised, in: Circle())
         }
         .accessibilityLabel("Exercise options")
+        // After the exercise's name, which carries the swipe actions.
+        .accessibilitySortPriority(-1)
     }
 
     private func history(for exercise: Exercise) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if let lastTime {
-                Text("Last time, \(lastTime.date.formatted(.dateTime.month(.abbreviated).day())): \(SetPrefill.summary(lastTime.sets))")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    NightShiftLabel(text: lastTime.date.formatted(.dateTime.month(.abbreviated).day()))
+                        .frame(minWidth: 64, alignment: .leading)
+                    Text(SetPrefill.summary(lastTime.sets))
+                        .font(.subheadline)
+                        .foregroundStyle(NightShift.muted)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Last time, \(lastTime.date.formatted(.dateTime.month(.wide).day())): \(SetPrefill.summary(lastTime.sets))")
             } else {
                 Text("First time logging this one")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .foregroundStyle(NightShift.muted)
             }
             let today = entry.orderedSets
             if !today.isEmpty {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Today: \(SetPrefill.summary(today.map(WorkoutFlow.values)))")
-                        .font(.callout.weight(.semibold))
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    NightShiftLabel(text: "Today", color: NightShift.accent)
+                        .frame(minWidth: 64, alignment: .leading)
+                        .accessibilityHidden(true)
+                    Text(today.map { WorkoutFlow.values($0).summary }.joined(separator: "  "))
+                        .font(NightShift.display(.title3, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(NightShift.text)
+                        .accessibilityLabel("Today: \(SetPrefill.summary(today.map(WorkoutFlow.values)))")
                         .accessibilityIdentifier("today-sets")
                     Spacer(minLength: 8)
                     Button {
                         if let last = today.last { WorkoutFlow.deleteSet(last, in: context) }
                         newRecords = []
                     } label: {
-                        Image(systemName: "arrow.uturn.backward.circle")
+                        Image(systemName: "arrow.uturn.backward")
+                            .foregroundStyle(NightShift.muted)
+                            .frame(width: 44, height: 44)
                     }
                     .accessibilityLabel("Remove last set")
                 }
@@ -190,15 +233,16 @@ struct ExerciseCardView: View {
         if !records.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 Label(newRecords.isEmpty ? "PR" : "New PR!", systemImage: "trophy.fill")
-                    .font(.caption.weight(.bold))
+                    .font(NightShift.display(.caption, weight: .heavy))
+                    .textCase(.uppercase)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .foregroundStyle(.black)
-                    .background(.yellow, in: Capsule())
+                    .foregroundStyle(NightShift.onAccent)
+                    .background(NightShift.accent, in: Capsule())
                 ForEach(Array(records.enumerated()), id: \.offset) { _, record in
                     Text(record.summary)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(NightShift.muted)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -208,60 +252,92 @@ struct ExerciseCardView: View {
 
     private var logging: some View {
         VStack(spacing: 12) {
-            Stepper(value: $reps, in: 1...100) {
-                Text("\(reps) reps")
-                    .font(.title3.weight(.semibold))
-                    .monospacedDigit()
-            }
-            // At accessibility text sizes the weight controls stack instead of overflowing the card.
-            let weightLayout = dynamicTypeSize.isAccessibilitySize
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            // At accessibility text sizes the two steppers stack instead of overflowing the card.
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 8))
                 : AnyLayout(HStackLayout(spacing: 8))
-            weightLayout {
-                HStack(spacing: 8) {
+            layout {
+                stepperBox(unit: "Reps") {
+                    stepButton("minus", label: "Fewer reps") { reps = max(reps - 1, 1) }
+                } value: {
+                    Text("\(reps)")
+                        .contentTransition(.numericText())
+                        .accessibilityLabel("\(reps) reps")
+                } more: {
+                    stepButton("plus", label: "More reps") { reps = min(reps + 1, 100) }
+                }
+                stepperBox(unit: "lb") {
+                    stepButton("minus", label: "Subtract 5 pounds") { weight = SetPrefill.stepWeight(weight, by: -1) }
+                } value: {
                     TextField("Weight", value: $weight, format: .number)
                         .keyboardType(.decimalPad)
                         .focused($isEditingWeight)
-                        .font(.title3.weight(.semibold))
-                        .monospacedDigit()
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: weightFieldWidth)
-                        .textFieldStyle(.roundedBorder)
                         .accessibilityLabel("Weight in pounds")
-                    Text("lb")
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                }
-                Spacer(minLength: 0)
-                HStack(spacing: 8) {
-                    Button("+5 lb") { weight = SetPrefill.stepWeight(weight, by: 1) }
-                        .buttonStyle(.bordered)
-                        .accessibilityLabel("Add 5 pounds")
-                    Stepper(
-                        "Weight",
-                        onIncrement: { weight = SetPrefill.stepWeight(weight, by: 1) },
-                        onDecrement: { weight = SetPrefill.stepWeight(weight, by: -1) }
-                    )
-                    .labelsHidden()
-                    .accessibilityValue("\(SetValues.format(weight)) pounds")
+                } more: {
+                    Button {
+                        weight = SetPrefill.stepWeight(weight, by: 1)
+                    } label: {
+                        Text("+5")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(NightShift.accent)
+                            .frame(width: 44, height: 44)
+                            .background(NightShift.raised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .accessibilityLabel("Add 5 pounds")
                 }
             }
             Button(action: logSet) {
-                Text("Log set")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
+                Text("LOG SET \(entry.sets.count + 1)")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.nightShiftPrimary)
+            .accessibilityLabel("Log set")
         }
+    }
+
+    /// A big number with − and + on either side, on the card's darkest fill.
+    private func stepperBox<Less: View, Value: View, More: View>(
+        unit: String,
+        @ViewBuilder less: () -> Less,
+        @ViewBuilder value: () -> Value,
+        @ViewBuilder more: () -> More
+    ) -> some View {
+        HStack(spacing: 4) {
+            less()
+            VStack(spacing: 0) {
+                value()
+                    .font(NightShift.display(.title, weight: .heavy))
+                    .monospacedDigit()
+                    .foregroundStyle(NightShift.text)
+                NightShiftLabel(text: unit)
+                    .accessibilityHidden(true)
+            }
+            .frame(maxWidth: .infinity)
+            more()
+        }
+        .padding(6)
+        .background(NightShift.background, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func stepButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.bold))
+                .foregroundStyle(NightShift.text)
+                .frame(width: 44, height: 44)
+                .background(NightShift.raised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .accessibilityLabel(label)
     }
 
     private var unavailable: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Nothing left to pick for \(slotName.isEmpty ? "this slot" : slotName) here. Swap one in by hand, or swipe the card away.")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(NightShift.muted)
             Button("Swap variation", action: onSwap)
-                .buttonStyle(.bordered)
+                .buttonStyle(.nightShiftSecondary)
         }
     }
 
@@ -296,6 +372,11 @@ struct ExerciseCardView: View {
         let values = SetPrefill.values(today: entry.orderedSets.map(WorkoutFlow.values), lastSession: lastTime?.sets ?? [])
         reps = values.reps
         weight = values.weightLb
+    }
+
+    private func equipmentText(for exercise: Exercise) -> String {
+        let equipment = exercise.equipment.map(\.name).sorted()
+        return equipment.isEmpty ? "Bodyweight" : equipment.joined(separator: " · ")
     }
 
     private func subtitle(for exercise: Exercise) -> String {

@@ -26,15 +26,16 @@ struct RestTimerView: View {
     }
 
     private func countdown(_ seconds: Int) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Label {
                 Text(CountdownText.format(seconds))
-                    .font(.title2.weight(.bold))
+                    .font(NightShift.display(.title2, weight: .bold))
                     .monospacedDigit()
+                    .foregroundStyle(NightShift.text)
                     .contentTransition(.numericText(countsDown: true))
             } icon: {
                 Image(systemName: "timer")
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(NightShift.accent)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Rest, \(seconds) seconds left")
@@ -44,16 +45,31 @@ struct RestTimerView: View {
                 WorkoutFlow.extendRest(in: session, context: context)
                 RestTimerService.sync(session)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(RestButtonStyle())
             .accessibilityLabel("Add 30 seconds")
             Button("Skip") {
                 WorkoutFlow.skipRest(in: session, context: context)
                 RestTimerService.sync(session)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(RestButtonStyle())
             .accessibilityLabel("Skip rest")
         }
-        .padding(12)
-        .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.leading, 12)
+        .padding(.trailing, 6)
+        .padding(.vertical, 6)
+        .background(NightShift.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// The timer's small +30s and Skip buttons.
+private struct RestButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(NightShift.text)
+            .padding(.horizontal, 10)
+            .frame(minHeight: 44)
+            .background(NightShift.raised, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

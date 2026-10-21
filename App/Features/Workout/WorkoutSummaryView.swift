@@ -54,13 +54,10 @@ struct WorkoutSummaryView: View {
         .safeAreaInset(edge: .bottom) {
             Button(action: onDone) {
                 Text("Done")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.nightShiftPrimary)
             .padding()
-            .background(.bar)
+            .background(NightShift.background)
         }
         .task { summary = WorkoutFlow.summary(of: session, in: context) }
     }

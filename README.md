@@ -87,10 +87,10 @@ unfinished one (the app also reopens it on launch). A workout runs warmup → li
   duration and an optional distance, or skip.
 - **Lifting:** one card per movement slot, in slot order. Drag the top card: → done, ← later,
   ↑ like (the card stays), ↓ equipment unavailable (the slot gets another variation, and the
-  equipment is marked at the workout's gym for 7 days). The card labels the action while you drag,
-  and right, left and up swipes can be undone from the toolbar. Each card shows last session's sets,
-  today's sets, reps and weight steppers prefilled from last time, "+5 lb" and **Log set**; its ⋯
-  menu has swap variation, like/unlike and never show. A card with sets logged keeps its exercise
+  equipment is marked at the workout's gym for 7 days). There are no direction labels on the card:
+  it moves and tilts with your finger, and right, left and up swipes can be undone from the toolbar.
+  Each card shows last session's sets, today's sets, reps and weight steppers
+  prefilled from last time (the weight's + adds 5 lb) and **Log set**; its ⋯ menu has swap variation, like/unlike and never show. A card with sets logged keeps its exercise
   (no down-swipe, swap or hide). **Add exercise** and **Finish lifting** sit under the stack.
 - **Rest timer:** logging a set starts a countdown on the card, sized by the exercise's type
   (Settings → Rest timers; defaults 3:00 heavy compound, 2:00 compound, 1:00 isolation), with
@@ -108,6 +108,11 @@ unfinished one (the app also reopens it on launch). A workout runs warmup → li
 `WorkoutStack` from the saved `WorkoutSession`, applies the change and saves straight away, so a
 force-quit never loses a set. Schema version 2 (`App/Persistence/SchemaV2.swift`) added each card's
 slot movement type so the stack rebuilds exactly; version 1 stores migrate automatically.
+
+## Look (Night Shift)
+
+The app is dark only, with one volt-green accent and condensed heavy type for names and numbers.
+The colors, the type helper and the shared button styles live in `App/Theme/NightShift.swift`.
 
 ## History
 

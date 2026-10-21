@@ -114,7 +114,7 @@ struct CustomExercisesView: View {
                     Text("Add an exercise the library is missing. Workouts pick it like any other.")
                 } actions: {
                     Button("Add exercise") { editing = EditingExercise(exercise: nil) }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.nightShiftPrimaryInline)
                 }
             }
         }
@@ -287,7 +287,7 @@ struct CustomStretchesView: View {
                     Text("Add a stretch to use it in your own stretch sequences.")
                 } actions: {
                     Button("Add stretch") { editing = EditingStretch(stretch: nil) }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.nightShiftPrimaryInline)
                 }
             }
         }
