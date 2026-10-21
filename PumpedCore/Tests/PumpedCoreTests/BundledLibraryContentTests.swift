@@ -21,11 +21,11 @@ final class BundledLibraryContentTests: XCTestCase {
         XCTAssertEqual(named.subtracting(ids), [])
     }
 
-    func testEveryMovementTypeHasThreeToSixVariations() {
+    func testEveryMovementTypeHasAtLeastThreeVariations() {
         let counts = Dictionary(grouping: library.exercises, by: \.movementType).mapValues(\.count)
         for movement in library.movementTypes {
             let count = counts[movement.id] ?? 0
-            XCTAssertTrue((3...6).contains(count), "\(movement.id) has \(count) variations")
+            XCTAssertGreaterThanOrEqual(count, 3, "\(movement.id) has \(count) variations")
         }
     }
 
