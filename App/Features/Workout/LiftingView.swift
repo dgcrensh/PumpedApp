@@ -23,8 +23,6 @@ struct LiftingView: View {
             progress(stack)
             if let current = stack.current, let entry = session.entries.first(where: { $0.slotOrder == current.id }) {
                 card(for: entry, waiting: stack.pending.count - 1)
-                    // Ahead of the spacer, so the card's image gets the spare height.
-                    .layoutPriority(1)
                     .id("\(current.id)-\(current.exerciseID ?? "none")")
                     .confirmationDialog(
                         "Never show \(entry.exercise?.name ?? "this exercise")?",

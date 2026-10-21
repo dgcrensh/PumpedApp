@@ -89,7 +89,7 @@ unfinished one (the app also reopens it on launch). A workout runs warmup → li
   ↑ like (the card stays), ↓ equipment unavailable (the slot gets another variation, and the
   equipment is marked at the workout's gym for 7 days). There are no direction labels on the card:
   it moves and tilts with your finger, and right, left and up swipes can be undone from the toolbar.
-  Each card shows the exercise's image, last session's sets, today's sets, reps and weight steppers
+  Each card shows last session's sets, today's sets, reps and weight steppers
   prefilled from last time (the weight's + adds 5 lb) and **Log set**; its ⋯ menu has swap variation, like/unlike and never show. A card with sets logged keeps its exercise
   (no down-swipe, swap or hide). **Add exercise** and **Finish lifting** sit under the stack.
 - **Rest timer:** logging a set starts a countdown on the card, sized by the exercise's type
@@ -113,11 +113,6 @@ slot movement type so the stack rebuilds exactly; version 1 stores migrate autom
 
 The app is dark only, with one volt-green accent and condensed heavy type for names and numbers.
 The colors, the type helper and the shared button styles live in `App/Theme/NightShift.swift`.
-
-**Exercise images:** each workout card has an image slot at the top (landscape, about 3:2,
-cropped to fill). Add a PNG or JPEG named after the exercise's id from `App/Resources/seed.json`,
-like `back-squat.png`, to a new `App/Resources/ExerciseImages/` folder and run `xcodegen generate`. Exercises
-without an image show a striped placeholder.
 
 ## History
 

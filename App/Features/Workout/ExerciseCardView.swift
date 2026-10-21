@@ -2,8 +2,8 @@ import PumpedCore
 import SwiftData
 import SwiftUI
 
-/// One card's contents (spec §6.2): the exercise's image, the exercise, last session's sets, today's
-/// sets, the reps and weight steppers (prefilled from last time) and Log set.
+/// One card's contents (spec §6.2): the exercise, last session's sets, today's sets, the reps and
+/// weight steppers (prefilled from last time) and Log set.
 struct ExerciseCardView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.cardSwipeActions) private var swipeActions
@@ -32,26 +32,17 @@ struct ExerciseCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ExerciseImageView(exerciseID: entry.exercise?.id)
-                // Gives way first when the screen is short, so the logging controls always fit.
-                .frame(maxWidth: .infinity, minHeight: 72, maxHeight: 224)
-                .layoutPriority(-1)
-                .clipped()
-                .overlay(alignment: .topLeading) { movementChip }
-                .overlay(alignment: .topTrailing) { menu }
-            VStack(alignment: .leading, spacing: 14) {
-                header
-                if let exercise = entry.exercise {
-                    history(for: exercise)
-                    RestTimerView(session: session)
-                    logging
-                } else {
-                    unavailable
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            header
+            if let exercise = entry.exercise {
+                history(for: exercise)
+                RestTimerView(session: session)
+                logging
+            } else {
+                unavailable
             }
-            .padding(16)
         }
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(NightShift.surface)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -84,6 +75,11 @@ struct ExerciseCardView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center) {
+                movementChip
+                Spacer(minLength: 8)
+                menu
+            }
             if entry.isSubstitute {
                 Text("Substitute for \(slotName)")
                     .font(.caption.weight(.semibold))
@@ -131,7 +127,7 @@ struct ExerciseCardView: View {
         }
     }
 
-    /// The slot's movement, on the image. VoiceOver hears it with the equipment instead.
+    /// The slot's movement, above the name. VoiceOver hears it with the equipment instead.
     @ViewBuilder
     private var movementChip: some View {
         let movement = entry.exercise?.movementType?.name ?? slotName
@@ -144,7 +140,6 @@ struct ExerciseCardView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(NightShift.background, in: Capsule())
-                .padding(14)
                 .accessibilityHidden(true)
         }
     }
@@ -179,8 +174,7 @@ struct ExerciseCardView: View {
                 .font(.body.weight(.bold))
                 .foregroundStyle(NightShift.text)
                 .frame(width: 44, height: 44)
-                .background(NightShift.background.opacity(0.8), in: Circle())
-                .padding(8)
+                .background(NightShift.raised, in: Circle())
         }
         .accessibilityLabel("Exercise options")
         // After the exercise's name, which carries the swipe actions.
@@ -389,41 +383,5 @@ struct ExerciseCardView: View {
         let equipment = exercise.equipment.map(\.name).sorted()
         let parts = [exercise.movementType?.name, equipment.isEmpty ? "Bodyweight" : equipment.joined(separator: ", ")]
         return parts.compactMap { $0 }.joined(separator: " · ")
-    }
-}
-
-/// The exercise's picture: a PNG or JPEG in the app bundle named after the exercise's id (for
-/// example `back-squat.png`, added under `App/Resources/ExerciseImages/`), or a placeholder until the
-/// image library is added. The slot is landscape, about 3:2, and crops to fill.
-struct ExerciseImageView: View {
-    let exerciseID: String?
-
-    var body: some View {
-        if let exerciseID, let image = UIImage(named: exerciseID) ?? UIImage(named: "\(exerciseID).jpg") {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .accessibilityHidden(true)
-        } else {
-            placeholder
-        }
-    }
-
-    private var placeholder: some View {
-        ZStack {
-            NightShift.raised
-            Canvas { context, size in
-                var stripes = Path()
-                for x in stride(from: -size.height, to: size.width, by: 20) {
-                    stripes.move(to: CGPoint(x: x, y: size.height))
-                    stripes.addLine(to: CGPoint(x: x + size.height, y: 0))
-                }
-                context.stroke(stripes, with: .color(.white.opacity(0.035)), lineWidth: 10)
-            }
-            Image(systemName: "photo")
-                .font(.largeTitle)
-                .foregroundStyle(NightShift.faint)
-        }
-        .accessibilityHidden(true)
     }
 }
