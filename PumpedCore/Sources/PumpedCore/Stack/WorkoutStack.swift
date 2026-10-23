@@ -1,3 +1,17 @@
+/// A split day's movement slot, as the stack is built from it.
+public struct SplitSlot: Equatable, Codable, Sendable {
+    /// The slot's movement type id.
+    public var movementType: String
+    /// The exercise the slot is pinned to in the split editor. When set, the slot gets this exercise
+    /// instead of a weighted pick, as long as it can be done today.
+    public var pinnedExerciseID: String?
+
+    public init(movementType: String, pinnedExerciseID: String? = nil) {
+        self.movementType = movementType
+        self.pinnedExerciseID = pinnedExerciseID
+    }
+}
+
 /// One card in the lifting stack: a movement slot and the exercise filling it.
 public struct StackEntry: Equatable, Codable, Sendable, Identifiable {
     /// Unique within the workout. Equals the slot's order: split day slots are 0..<n, slots added
@@ -40,16 +54,38 @@ public struct WorkoutStack: Equatable, Codable, Sendable {
 
     /// Fills every slot of a split day, in order, so duplicate movement types get distinct exercises.
     /// Starts in the warmup phase.
+    ///
+    /// A pinned slot gets its exercise whenever it's eligible (not hidden, equipment available, not
+    /// already in the stack); otherwise it's filled like an unpinned slot. Exercises pinned by later
+    /// slots are held back from earlier weighted picks, so a pin isn't lost to a slot before it.
+    public static func build(
+        slots: [SplitSlot],
+        selector: VariationSelector,
+        using rng: inout some RandomNumberGenerator
+    ) -> WorkoutStack {
+        var stack = WorkoutStack(phase: .warmup, entries: [], queue: [])
+        for (index, slot) in slots.enumerated() {
+            let laterPins = Set(slots[(index + 1)...].compactMap(\.pinnedExerciseID))
+            let pinned = slot.pinnedExerciseID.flatMap {
+                selector.pinnedFill($0, for: slot.movementType, excluding: stack.exerciseIDsInStack)
+            }
+            let fill = pinned ?? selector.select(
+                for: slot.movementType,
+                excluding: stack.exerciseIDsInStack.union(laterPins),
+                using: &rng
+            )
+            stack.append(slot.movementType, fill: fill)
+        }
+        return stack
+    }
+
+    /// Builds from unpinned slots of these movement types.
     public static func build(
         slots movementTypes: [String],
         selector: VariationSelector,
         using rng: inout some RandomNumberGenerator
     ) -> WorkoutStack {
-        var stack = WorkoutStack(phase: .warmup, entries: [], queue: [])
-        for movementType in movementTypes {
-            stack.append(movementType, selector: selector, using: &rng)
-        }
-        return stack
+        build(slots: movementTypes.map { SplitSlot(movementType: $0) }, selector: selector, using: &rng)
     }
 
     // MARK: - Reading
@@ -199,7 +235,11 @@ public struct WorkoutStack: Equatable, Codable, Sendable {
         selector: VariationSelector,
         using rng: inout some RandomNumberGenerator
     ) -> StackEntry {
-        let fill = selector.select(for: movementType, excluding: exerciseIDsInStack, using: &rng)
+        append(movementType, fill: selector.select(for: movementType, excluding: exerciseIDsInStack, using: &rng))
+    }
+
+    @discardableResult
+    private mutating func append(_ movementType: String, fill: SlotFill) -> StackEntry {
         let entry = StackEntry(id: (entries.map(\.id).max() ?? -1) + 1, movementType: movementType, fill: fill)
         entries.append(entry)
         queue.append(entry.id)

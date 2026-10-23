@@ -23,7 +23,18 @@ final class SplitEditorTests: XCTestCase {
         let press = element(in: app, labelStartingWith: "Horizontal Press")
         XCTAssertTrue(press.waitForExistence(timeout: 5))
         press.tap()
-        XCTAssertTrue(app.staticTexts["Horizontal Press"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Add movement"].waitForNonExistence(timeout: 5))
+        let slot = element(in: app, labelStartingWith: "Horizontal Press")
+        XCTAssertTrue(slot.waitForExistence(timeout: 5))
+
+        // Pin the slot to one exercise.
+        slot.tap()
+        XCTAssertTrue(app.navigationBars["Pin Horizontal Press"].waitForExistence(timeout: 5))
+        element(in: app, labelStartingWith: "Dumbbell Bench Press").tap()
+        let pinned = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "Pinned to Dumbbell Bench Press"))
+            .firstMatch
+        XCTAssertTrue(pinned.waitForExistence(timeout: 5))
     }
 
     @MainActor

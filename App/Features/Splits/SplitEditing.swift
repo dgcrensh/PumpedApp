@@ -110,6 +110,25 @@ enum SplitEditing {
         apply(Reorder.move(count: slots.count, fromOffsets: source, toOffset: destination), to: slots) { $0.order = $1 }
     }
 
+    /// Pins a slot to one of its movement type's exercises, so workouts use it instead of picking
+    /// a variation. Nil unpins. Exercises of another movement type are ignored.
+    static func setPin(_ exercise: Exercise?, on slot: MovementSlot) {
+        guard let exercise else {
+            slot.pinnedExercise = nil
+            return
+        }
+        guard let movementType = slot.movementType, exercise.movementType === movementType else { return }
+        slot.pinnedExercise = exercise
+    }
+
+    /// Exercises a slot can be pinned to: its movement type's, minus hidden ones (but keeping the
+    /// current pin), by name.
+    static func pinCandidates(for slot: MovementSlot) -> [Exercise] {
+        (slot.movementType?.exercises ?? [])
+            .filter { !$0.isHidden || $0 === slot.pinnedExercise }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
     // MARK: Stretch sequences
 
     @discardableResult

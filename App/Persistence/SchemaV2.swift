@@ -144,23 +144,3 @@ enum PumpedSchemaV2: VersionedSchema {
         }
     }
 }
-
-// The rest of the app always uses the current schema's types.
-typealias MovementType = PumpedSchemaV1.MovementType
-typealias Exercise = PumpedSchemaV1.Exercise
-typealias Equipment = PumpedSchemaV1.Equipment
-typealias CardioOption = PumpedSchemaV1.CardioOption
-typealias Stretch = PumpedSchemaV1.Stretch
-typealias StretchSequence = PumpedSchemaV1.StretchSequence
-typealias StretchItem = PumpedSchemaV1.StretchItem
-typealias Split = PumpedSchemaV1.Split
-typealias SplitDay = PumpedSchemaV1.SplitDay
-typealias MovementSlot = PumpedSchemaV1.MovementSlot
-typealias Gym = PumpedSchemaV1.Gym
-typealias EquipmentUnavailability = PumpedSchemaV1.EquipmentUnavailability
-typealias WorkoutSession = PumpedSchemaV2.WorkoutSession
-typealias WarmupLog = PumpedSchemaV2.WarmupLog
-typealias WorkoutEntry = PumpedSchemaV2.WorkoutEntry
-typealias SetLog = PumpedSchemaV2.SetLog
-typealias RestTimerSettings = PumpedSchemaV1.RestTimerSettings
-typealias SeedState = PumpedSchemaV1.SeedState

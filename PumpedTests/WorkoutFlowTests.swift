@@ -29,6 +29,39 @@ final class WorkoutFlowTests: XCTestCase {
         XCTAssertNil(WorkoutFlow.currentEntry(of: session), "no card on top during the warmup")
     }
 
+    func testPinnedSlotStartsWithItsExercise() throws {
+        let (split, day) = try pushPull(pushSlots: ["biceps-curl", "biceps-curl"])
+        let curl = try exercise("dumbbell-curl")
+        SplitEditing.setPin(curl, on: day.orderedSlots[1])
+
+        for seed in 0..<10 {
+            var rng = SeededGenerator(seed: UInt64(seed))
+            let session = WorkoutFlow.start(day: day, of: split, gym: nil, in: context, using: &rng)
+            XCTAssertEqual(entry(1, of: session)?.exercise?.id, "dumbbell-curl")
+            XCTAssertEqual(entry(1, of: session)?.isSubstitute, false)
+            XCTAssertNotEqual(entry(0, of: session)?.exercise?.id, "dumbbell-curl")
+            WorkoutFlow.discard(session, in: context)
+        }
+    }
+
+    func testPinnedExerciseIsSkippedWhenItsEquipmentIsUnavailable() throws {
+        let gym = Gym(name: "Home gym", latitude: 0, longitude: 0)
+        context.insert(gym)
+        let dumbbells = try XCTUnwrap(context.fetch(FetchDescriptor<Equipment>(predicate: #Predicate { $0.id == "dumbbells" })).first)
+        let mark = EquipmentUnavailability(gym: nil, equipment: dumbbells)
+        context.insert(mark)
+        gym.unavailableEquipment.append(mark)
+
+        let (split, day) = try pushPull(pushSlots: ["biceps-curl"])
+        let curl = try exercise("dumbbell-curl")
+        SplitEditing.setPin(curl, on: day.orderedSlots[0])
+        let session = WorkoutFlow.start(day: day, of: split, gym: gym, in: context, using: &rng)
+
+        let picked = try XCTUnwrap(entry(0, of: session)?.exercise)
+        XCTAssertEqual(picked.movementType?.id, "biceps-curl")
+        XCTAssertFalse(picked.equipment.contains { $0.id == "dumbbells" })
+    }
+
     func testWarmupLogStartsLifting() throws {
         let session = try startedSession()
         let rower = try XCTUnwrap(context.fetch(FetchDescriptor<CardioOption>()).first)
@@ -320,6 +353,10 @@ final class WorkoutFlowTests: XCTestCase {
 
     private func entry(_ slotOrder: Int, of session: WorkoutSession) -> WorkoutEntry? {
         session.entries.first { $0.slotOrder == slotOrder }
+    }
+
+    private func exercise(_ id: String) throws -> Exercise {
+        try XCTUnwrap(context.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.id == id })).first)
     }
 
     private func exerciseWithEquipment(movementType: String) throws -> Exercise {

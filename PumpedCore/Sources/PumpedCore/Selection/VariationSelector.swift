@@ -83,6 +83,16 @@ public struct VariationSelector: Equatable, Sendable {
         return .unavailable
     }
 
+    /// The fill for a slot pinned to `exerciseID` in the split editor, or nil when the pin can't be
+    /// honored today (the exercise is hidden, needs unavailable equipment, is already in the stack or
+    /// no longer exists). The slot then goes through `select` like any other.
+    public func pinnedFill(_ exerciseID: String, for movementType: String, excluding excluded: Set<String>) -> SlotFill? {
+        guard let exercise = exercises[exerciseID], isEligible(exercise, excluded: excluded) else { return nil }
+        return exercise.movementType == movementType
+            ? .variation(exerciseID: exerciseID)
+            : .substitute(exerciseID: exerciseID)
+    }
+
     /// Eligible variations of a movement type with their weights, sorted by id.
     /// Also useful for a debug overlay.
     public func weightedCandidates(for movementType: String, excluding excluded: Set<String>) -> [(id: String, weight: Double)] {

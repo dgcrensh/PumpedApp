@@ -30,4 +30,31 @@ final class MigrationTests: XCTestCase {
         XCTAssertNil(entry.movementTypeID)
         XCTAssertEqual(entry.sets.map(\.weightLb), [225])
     }
+
+    /// A store written by schema version 2 keeps its split days and slots, now unpinned.
+    func testVersion2StoreMigratesWithUnpinnedSlots() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("v2-\(UUID().uuidString).store")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        do {
+            let schema = Schema(versionedSchema: PumpedSchemaV2.self)
+            let v2 = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url)])
+            let split = PumpedSchemaV1.Split(name: "PPL", isActive: true)
+            v2.mainContext.insert(split)
+            let day = PumpedSchemaV1.SplitDay(name: "Pull", order: 0)
+            v2.mainContext.insert(day)
+            split.days.append(day)
+            let slot = PumpedSchemaV1.MovementSlot(movementType: nil, order: 0)
+            v2.mainContext.insert(slot)
+            day.slots.append(slot)
+            try v2.mainContext.save()
+        }
+
+        let current = try PumpedStore.makeContainer(url: url)
+        let days = try current.mainContext.fetch(FetchDescriptor<SplitDay>())
+        XCTAssertEqual(days.map(\.name), ["Pull"])
+        XCTAssertEqual(days.first?.split?.name, "PPL")
+        let slot = try XCTUnwrap(days.first?.slots.first)
+        XCTAssertNil(slot.pinnedExercise)
+    }
 }

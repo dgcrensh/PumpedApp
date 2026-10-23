@@ -63,7 +63,9 @@ enum WorkoutFlow {
         using rng: inout some RandomNumberGenerator
     ) -> WorkoutSession {
         let selector = makeSelector(gym: gym, now: now, in: context)
-        let slots = day.orderedSlots.compactMap { $0.movementType?.id }
+        let slots = day.orderedSlots.compactMap { slot in
+            slot.movementType.map { SplitSlot(movementType: $0.id, pinnedExerciseID: slot.pinnedExercise?.id) }
+        }
         let stack = WorkoutStack.build(slots: slots, selector: selector, using: &rng)
         let session = WorkoutSession(startedAt: now, split: split, splitDay: day, gym: gym)
         context.insert(session)

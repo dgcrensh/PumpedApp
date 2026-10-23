@@ -40,8 +40,8 @@ xcodebuild test -project Pumped.xcodeproj -scheme Pumped \
 
 | Path | What it is |
 |---|---|
-| `Selection/` | `VariationSelector` picks an exercise per movement slot (spec §7): filters hidden, gym-unavailable and already-stacked exercises, weights by like/familiarity/repeat damping (all constants in `SelectionTuning`), and falls back to same-muscle substitutes. Takes an injected `RandomNumberGenerator`; `SeededGenerator` makes it deterministic. |
-| `Stack/` | `WorkoutStack`, the workout state machine: phases, enforced card order, the four swipes, swap, hide and added slots. A `Codable` value so the app can persist it after every change. |
+| `Selection/` | `VariationSelector` picks an exercise per movement slot (spec §7): filters hidden, gym-unavailable and already-stacked exercises, weights by like/familiarity/repeat damping (all constants in `SelectionTuning`), and falls back to same-muscle substitutes. `pinnedFill` honors a slot pinned to one exercise when it can be done today. Takes an injected `RandomNumberGenerator`; `SeededGenerator` makes it deterministic. |
+| `Stack/` | `WorkoutStack`, the workout state machine: phases, enforced card order, the four swipes, swap, hide and added slots. It's built from `SplitSlot`s, which carry each slot's pin. A `Codable` value so the app can persist it after every change. |
 | `Workout/` | `SwipeClassifier` (turns a drag into one of the four swipes by distance or flick speed), `SetPrefill` (what the card's reps and weight steppers start at), `RestTimer` (absolute end date, skip, +30s), `CooldownPlayer` (stretch countdown with auto-advance that catches up after the background, pause, skip, back) and `WorkoutSummary`. |
 | `PRs/` | `PersonalRecords`: heaviest weight, best Epley e1RM and most reps at a weight, measured against earlier sets, plus the per-set check behind the card's PR badge and the PR timeline. `RecordBook` holds an exercise's current bests, and `ExerciseProgress` turns workouts into chart points (top set and e1RM). |
 | `Gyms/` | `EquipmentAvailability` (7-day unavailable-equipment window, reset on re-swipe) and `GymMatcher` (nearest known gym within 150 m). |
@@ -74,6 +74,12 @@ remove and reorder days; and, per day, the ordered movement slots (duplicates al
 cool-down stretch sequence and an optional default warmup cardio. Each split shows where its cycle
 stands ("Next up: Pull, day 2 of 3") with a picker to skip or repeat a day. Stretch sequences live
 there too: the seeded defaults are read-only and can be duplicated into editable copies.
+
+Tap a movement in a day to **pin** it to one exercise (say Biceps Curl → Dumbbell Curl). Workouts
+then always use that exercise for the slot instead of picking and rotating variations. If it can't
+be done that day (its equipment is marked unavailable at the gym, it's hidden, or another slot
+already has it), the slot is filled the usual way. Exercises pinned by later slots are held back
+from earlier slots' picks, and a down-swipe or swap on a pinned card works as on any other.
 
 The cycle math (keeping the same day "next up" across edits) and list reordering live in
 `PumpedCore/Sources/PumpedCore/Splits` and are tested on Linux.
@@ -108,6 +114,7 @@ unfinished one (the app also reopens it on launch). A workout runs warmup → li
 `WorkoutStack` from the saved `WorkoutSession`, applies the change and saves straight away, so a
 force-quit never loses a set. Schema version 2 (`App/Persistence/SchemaV2.swift`) added each card's
 slot movement type so the stack rebuilds exactly; version 1 stores migrate automatically.
+Version 3 (`App/Persistence/SchemaV3.swift`) added each movement slot's optional pinned exercise.
 
 ## Look (Night Shift)
 
