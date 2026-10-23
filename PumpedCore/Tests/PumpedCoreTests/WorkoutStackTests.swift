@@ -48,6 +48,102 @@ final class WorkoutStackTests: XCTestCase {
         )
     }
 
+    // MARK: Pins
+
+    func testPinnedSlotAlwaysGetsItsExercise() {
+        let slots = [SplitSlot(movementType: "squat", pinnedExerciseID: "goblet-squat")]
+        for seed in 0..<20 {
+            var rng = SeededGenerator(seed: UInt64(seed))
+            let stack = WorkoutStack.build(slots: slots, selector: selector, using: &rng)
+            XCTAssertEqual(stack.entry(0)?.fill, .variation(exerciseID: "goblet-squat"))
+        }
+    }
+
+    func testPinBeatsWeighting() {
+        let liked = Fixture.selector { exercises in
+            exercises.update("back-squat") { $0.isLiked = true }
+            exercises.update("leg-press") { $0.isLiked = true }
+        }
+        let stack = WorkoutStack.build(
+            slots: [SplitSlot(movementType: "squat", pinnedExerciseID: "goblet-squat")],
+            selector: liked,
+            using: &rng
+        )
+        XCTAssertEqual(stack.entry(0)?.exerciseID, "goblet-squat")
+    }
+
+    func testEarlierSlotsLeaveALaterPinAlone() {
+        // Without the hold-back, the unpinned squat slots would take goblet squat about two times in three.
+        let slots = [
+            SplitSlot(movementType: "squat"),
+            SplitSlot(movementType: "squat"),
+            SplitSlot(movementType: "squat", pinnedExerciseID: "goblet-squat"),
+        ]
+        for seed in 0..<20 {
+            var rng = SeededGenerator(seed: UInt64(seed))
+            let stack = WorkoutStack.build(slots: slots, selector: selector, using: &rng)
+            XCTAssertEqual(stack.entry(2)?.fill, .variation(exerciseID: "goblet-squat"))
+            XCTAssertEqual(Set(stack.entries.compactMap(\.exerciseID)).count, 3)
+        }
+    }
+
+    func testPinnedExerciseWithUnavailableEquipmentFallsBackToSelection() {
+        let selector = Fixture.selector(unavailable: ["dumbbells"])
+        let stack = WorkoutStack.build(
+            slots: [SplitSlot(movementType: "squat", pinnedExerciseID: "goblet-squat")],
+            selector: selector,
+            using: &rng
+        )
+        let fill = stack.entry(0)?.fill
+        XCTAssertNotNil(fill?.exerciseID)
+        XCTAssertNotEqual(fill?.exerciseID, "goblet-squat")
+        XCTAssertEqual(fill?.isSubstitute, false)
+    }
+
+    func testHiddenOrMissingPinnedExerciseFallsBackToSelection() {
+        let selector = Fixture.selector { $0.update("goblet-squat") { $0.isHidden = true } }
+        let stack = WorkoutStack.build(
+            slots: [
+                SplitSlot(movementType: "squat", pinnedExerciseID: "goblet-squat"),
+                SplitSlot(movementType: "press", pinnedExerciseID: "deleted-exercise"),
+            ],
+            selector: selector,
+            using: &rng
+        )
+        XCTAssertNotEqual(stack.entry(0)?.exerciseID, "goblet-squat")
+        XCTAssertNotNil(stack.entry(0)?.exerciseID)
+        XCTAssertNotNil(stack.entry(1)?.exerciseID)
+    }
+
+    func testTwoSlotsPinnedToTheSameExercise() {
+        let slots = Array(repeating: SplitSlot(movementType: "squat", pinnedExerciseID: "goblet-squat"), count: 2)
+        let stack = WorkoutStack.build(slots: slots, selector: selector, using: &rng)
+        XCTAssertEqual(stack.entry(0)?.exerciseID, "goblet-squat")
+        XCTAssertNotNil(stack.entry(1)?.exerciseID)
+        XCTAssertNotEqual(stack.entry(1)?.exerciseID, "goblet-squat")
+    }
+
+    func testDownSwipeOnAPinnedCardRefillsWithAnotherVariation() {
+        var stack = WorkoutStack.build(
+            slots: [SplitSlot(movementType: "squat", pinnedExerciseID: "goblet-squat")],
+            selector: selector,
+            using: &rng
+        )
+        stack.startLifting()
+        XCTAssertEqual(stack.swipeDown(selector: &selector, using: &rng), ["dumbbells"])
+        XCTAssertNotNil(stack.current?.exerciseID)
+        XCTAssertNotEqual(stack.current?.exerciseID, "goblet-squat")
+    }
+
+    func testPinOfAnotherMovementTypeIsASubstitute() {
+        let stack = WorkoutStack.build(
+            slots: [SplitSlot(movementType: "squat", pinnedExerciseID: "split-squat")],
+            selector: selector,
+            using: &rng
+        )
+        XCTAssertEqual(stack.entry(0)?.fill, .substitute(exerciseID: "split-squat"))
+    }
+
     // MARK: Phases
 
     func testPhaseTransitions() {
@@ -66,7 +162,7 @@ final class WorkoutStackTests: XCTestCase {
     }
 
     func testEmptyStackSkipsLifting() {
-        var stack = WorkoutStack.build(slots: [], selector: selector, using: &rng)
+        var stack = WorkoutStack.build(slots: [String](), selector: selector, using: &rng)
         stack.startLifting()
         XCTAssertEqual(stack.phase, .cooldown)
     }

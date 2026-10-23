@@ -93,6 +93,41 @@ final class SplitEditingTests: XCTestCase {
         XCTAssertEqual(day.orderedSlots.map(\.order), [0, 1])
     }
 
+    func testPinningASlot() throws {
+        let split = SplitEditing.createSplit(named: "PPL", in: context)
+        let day = SplitEditing.addDay(named: "Pull", to: split, in: context)
+        let curls = try movementType("biceps-curl")
+        let slot = SplitEditing.addSlot(curls, to: day, in: context)
+        let candidates = SplitEditing.pinCandidates(for: slot)
+        XCTAssertTrue(candidates.allSatisfy { $0.movementType?.id == "biceps-curl" })
+        let curl = try XCTUnwrap(candidates.first { $0.id == "dumbbell-curl" })
+
+        SplitEditing.setPin(curl, on: slot)
+        try context.save()
+        XCTAssertTrue(slot.pinnedExercise === curl)
+
+        // An exercise of another movement type can't be pinned here.
+        let row = try XCTUnwrap(context.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.id == "barbell-row" })).first)
+        SplitEditing.setPin(row, on: slot)
+        XCTAssertTrue(slot.pinnedExercise === curl)
+
+        SplitEditing.setPin(nil, on: slot)
+        XCTAssertNil(slot.pinnedExercise)
+    }
+
+    func testHiddenExercisesAreOfferedOnlyAsTheCurrentPin() throws {
+        let split = SplitEditing.createSplit(named: "PPL", in: context)
+        let day = SplitEditing.addDay(named: "Pull", to: split, in: context)
+        let curls = try movementType("biceps-curl")
+        let slot = SplitEditing.addSlot(curls, to: day, in: context)
+        let curl = try XCTUnwrap(SplitEditing.pinCandidates(for: slot).first { $0.id == "dumbbell-curl" })
+
+        curl.isHidden = true
+        XCTAssertFalse(SplitEditing.pinCandidates(for: slot).contains { $0 === curl })
+        slot.pinnedExercise = curl
+        XCTAssertTrue(SplitEditing.pinCandidates(for: slot).contains { $0 === curl })
+    }
+
     func testDuplicatingDefaultSequenceMakesEditableCopy() throws {
         let source = try XCTUnwrap(context.fetch(FetchDescriptor<StretchSequence>(predicate: #Predicate { $0.id == "full-body" })).first)
         let copy = SplitEditing.duplicateSequence(source, in: context)

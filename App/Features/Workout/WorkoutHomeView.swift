@@ -145,6 +145,13 @@ struct WorkoutHomeView: View {
                         .font(.body.weight(.medium))
                         .foregroundStyle(NightShift.text)
                     Spacer(minLength: 0)
+                    if let pinned = slot.pinnedExercise, !pinned.isHidden {
+                        Label(pinned.name, systemImage: "pin.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(NightShift.muted)
+                            .lineLimit(1)
+                            .accessibilityLabel("Pinned to \(pinned.name)")
+                    }
                 }
                 .frame(minHeight: 44)
                 if index < slots.count - 1 {
